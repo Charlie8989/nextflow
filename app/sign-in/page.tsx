@@ -1,7 +1,7 @@
 "use client";
 
 import { useClerk, useSignIn } from "@clerk/nextjs";
-import { useState } from "react";
+import { JSX, useState } from "react";
 
 export default function SignInPage(): JSX.Element {
   const { redirectToSignIn } = useClerk();
@@ -13,21 +13,19 @@ export default function SignInPage(): JSX.Element {
 
   // if (!isLoaded) return <div className="text-white">Loading...</div>;
 
-  const handleGoogle = async (): Promise<void> => {
-    await redirectToSignIn({
-      strategy: "oauth_google",
-      redirectUrl: "/sso-callback",
-      redirectUrlComplete: "/dashboard",
-    });
-  };
+const handleGoogle = async () => {
+  await redirectToSignIn({
+    signInForceRedirectUrl: "/",
+  });
+};
 
 const handleEmail = async (): Promise<void> => {
   try {
     await redirectToSignIn({
-      identifier: email,
-      strategy: "email_link",
-      redirectUrl: "/sso-callback",
-      redirectUrlComplete: "/dashboard",
+      signInForceRedirectUrl: "/",
+      initialValues: {
+        emailAddress: email,
+      },
     });
   } catch (err) {
     console.error(err);
@@ -80,28 +78,6 @@ const handleEmail = async (): Promise<void> => {
                 className="bg-blue-600 p-3 rounded-lg text-sm md:text-base"
               >
                 Continue
-              </button>
-            </>
-          )}
-
-          {step === "otp" && (
-            <>
-            
-              <input
-                type="text"
-                placeholder="Enter OTP"
-                className="p-3 rounded bg-black border border-white/10 mb-4 text-sm md:text-base"
-                value={otp}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setOtp(e.target.value)
-                }
-              />
-
-              <button
-                onClick={handleVerify}
-                className="bg-blue-600 p-3 rounded-lg text-sm md:text-base"
-              >
-                Verify
               </button>
             </>
           )}

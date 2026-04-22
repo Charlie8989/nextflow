@@ -12,7 +12,7 @@ type Props = {
 
 export default function TextNode({ data }: Props): JSX.Element {
   return (
-    <div className="w-[100px]  md:w-[180px] bg-[#202020] rounded-2xl border border-blue-500 text-white overflow-hidden shadow-xl">
+    <div className="w-[100px] border-cyan-400-400 md:w-[180px] bg-[#202020] rounded-2xl border border-cyan-500 text-white overflow-hidden shadow-xl">
 
       <div className="p-3 text-xs">
 

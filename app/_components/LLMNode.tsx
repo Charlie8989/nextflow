@@ -5,12 +5,21 @@ type Props = {
   data: {
     prompt?: string;
     model?: string;
+    running?: boolean;
+    onChange?: (value: string) => void;
   };
 };
 
 export default function LLMNode({ data }: Props): JSX.Element {
   return (
-    <div className="w-[100px] md:w-[180px] bg-[#202020] rounded-2xl border border-purple-500 text-white overflow-hidden shadow-xl">
+    <div
+      className={`w-[100px] md:w-[180px] bg-[#202020] rounded-2xl border text-white overflow-hidden shadow-xl
+  ${
+    data.running
+      ? "border-purple-500 shadow-[0_0_20px_rgba(34,197,94,0.8)] animate-pulse"
+      : "border-blue-500"
+  }`}
+    >
       <div className="p-3 text-xs">
         <div className="mb-3 text-end">
           <p className="text-white/50 mb-1">LLM</p>
@@ -19,7 +28,8 @@ export default function LLMNode({ data }: Props): JSX.Element {
         <div className="mb-3">
           <p className="text-white/50 mb-1">Prompt</p>
           <textarea
-            defaultValue={data.prompt || ""}
+            value={data.prompt || ""}
+            onChange={(e) => data.onChange?.(e.target.value)}
             className="w-full min-h-[80px] bg-[#202020] p-2 rounded border border-white/20 outline-none"
           />
         </div>

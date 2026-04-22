@@ -1,6 +1,7 @@
 "use client";
 
 import { useUser, useClerk } from "@clerk/nextjs";
+import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useRef, useEffect, JSX } from "react";
 
@@ -10,6 +11,7 @@ export default function HomePage(): JSX.Element {
   const { signOut } = useClerk();
 
   const [open, setOpen] = useState<boolean>(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -22,19 +24,94 @@ export default function HomePage(): JSX.Element {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleStart = (): void => {
-    if (!isLoaded) return;
-    if (!isSignedIn) {
-      router.push("/sign-in");
-    } else {
-      router.push("/nodes");
-    }
+  const [workflows, setWorkflows] = useState<any[]>([]);
+
+  const fetchWorkflows = async () => {
+    if (!user) return;
+
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/workflow/${user.id}`,
+    );
+
+    const data = await res.json();
+
+    setWorkflows(data || []);
   };
 
-const handleLogOut = async (): Promise<void> => {
-  setOpen(false);
-  await signOut({ redirectUrl: "/" });
-};
+  const createWorkflow = async () => {
+    console.log("clicked");
+    if (!user) return;
+
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/workflow`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          clerkId: user.id,
+          name: "Untitled Workflow",
+          nodes: [],
+          edges: [],
+        }),
+      },
+    );
+
+    const data = await res.json();
+
+    router.push(`/workflow/${data.id}`);
+  };
+
+  const handleStart = async (): Promise<void> => {
+    if (!isLoaded) return;
+
+    if (!isSignedIn) {
+      router.push("/sign-in");
+      return;
+    }
+
+    await createWorkflow();
+  };
+
+  //data for backend
+  useEffect(() => {
+    if (!user) return;
+
+    fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/user`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        clerkId: user.id,
+        email: user.primaryEmailAddress?.emailAddress,
+        name: user.fullName,
+        imageUrl: user.imageUrl,
+      }),
+    });
+  }, [user]);
+
+  //fetch workflows
+  useEffect(() => {
+    if (!isLoaded || !user) return;
+
+    fetchWorkflows();
+  }, [isLoaded, user]);
+
+  const handleLogOut = async (): Promise<void> => {
+    setOpen(false);
+    await signOut({ redirectUrl: "/" });
+  };
+
+  const handleDelete = async (id: string) => {
+    await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/workflow/${id}`, {
+      method: "DELETE",
+    });
+
+    setWorkflows((prev) => prev.filter((w) => w.id !== id));
+  };
+
   return (
     <div className="min-h-screen bg-black text-white flex">
       <div className="hidden md:flex w-[72px] bg-[#0b0b0b] flex-col items-center py-4 border-r border-white/10 relative">
@@ -56,8 +133,7 @@ const handleLogOut = async (): Promise<void> => {
 
                 <div className="mt-2 bg-white/5 p-2 rounded-lg">
                   <p className="text-sm font-medium">
-                    {user?.username ||
-                      user?.primaryEmailAddress?.emailAddress}
+                    {user?.username || user?.primaryEmailAddress?.emailAddress}
                   </p>
                   <p className="text-xs text-white/50">Free</p>
                 </div>
@@ -81,9 +157,7 @@ const handleLogOut = async (): Promise<void> => {
                 <button className="text-left hover:text-white">
                   Buy credits
                 </button>
-                <button className="text-left hover:text-white">
-                  Settings
-                </button>
+                <button className="text-left hover:text-white">Settings</button>
                 <button className="text-left hover:text-white">
                   Usage Statistics
                 </button>
@@ -126,7 +200,7 @@ const handleLogOut = async (): Promise<void> => {
             </p>
 
             <button
-              onClick={() => router.push("/workflow")}
+              onClick={createWorkflow}
               className="bg-white text-black px-6 md:px-8 py-2 md:py-2 rounded-full text-sm font-medium"
             >
               New Workflow →
@@ -144,18 +218,81 @@ const handleLogOut = async (): Promise<void> => {
             <button className="whitespace-nowrap">Templates</button>
           </div>
 
-          <div className="flex flex-col items-center justify-center h-[60%] text-center">
-            <img src="/images/nodes.webp" className="size-8 md:size-10 mt-10" />
-            <h2 className="text-lg md:text-xl mb-2">No Workflows Yet</h2>
-            <p className="text-white/50 mb-6 text-sm md:text-base">
-              You haven't created any workflows yet.
-            </p>
-            <button
-              onClick={handleStart}
-              className="bg-white text-black px-6 md:px-8 py-2 md:py-2 rounded-full text-sm font-medium"
-            >
-              New Workflow
-            </button>
+          <div className="w-full max-w-screen">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
+              <div
+                onClick={handleStart}
+                className="h-40 bg-white/5 rounded-xl flex items-center justify-center cursor-pointer hover:bg-white/10"
+              >
+                <div className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center text-xl">
+                  +
+                </div>
+              </div>
+
+              {workflows.map((wf) => (
+                <div
+                  key={wf.id}
+                  onClick={() => router.push(`/workflow/${wf.id}`)}
+                  className="cursor-pointer"
+                >
+                  <div className="relative h-40 bg-white/5 rounded-xl overflow-hidden">
+                    <img
+                      src={wf.image || "/images/hero-image.webp"}
+                      className="w-full h-full object-cover"
+                    />
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteId(wf.id);
+                      }}
+                      className="absolute top-2 right-2 bg-black/60 hover:bg-red-500 p-2 rounded-full"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+
+                  <p className="mt-2 text-sm font-medium">
+                    {wf.name || "Untitled"}
+                  </p>
+
+                  <p className="text-xs text-white/50">
+                    Edited {new Date(wf.updatedAt).toLocaleString()}
+                  </p>
+                </div>
+              ))}
+
+              {deleteId && (
+                <div onClick={() => setDeleteId(null)} className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+                  <div className="bg-[#0b0b0b] p-6 rounded-xl w-80 border border-white/10">
+                    <h2 className="text-lg mb-2">Delete Workflow?</h2>
+                    <p className="text-sm text-white/50 mb-4">
+                      This action cannot be undone.
+                    </p>
+
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => setDeleteId(null)}
+                        className="px-4 py-2 text-sm bg-white/10 rounded-lg"
+                      >
+                        Cancel
+                      </button>
+
+                      <button
+                        onClick={async () => {
+                          await handleDelete(deleteId);
+                          setDeleteId(null);
+                        }}
+                        className="px-4 py-2 text-sm bg-red-500 rounded-lg"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </div>
           </div>
         </div>
       </div>

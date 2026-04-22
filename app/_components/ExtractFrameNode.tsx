@@ -5,12 +5,20 @@ type Props = {
   data: {
     time?: string;
     format?: string;
+    running?: boolean;
   };
 };
 
 export default function ExtractFrameNode({ data }: Props): JSX.Element {
   return (
-    <div className="w-[100px] md:w-[180px] bg-[#202020] rounded-2xl border border-red-500 text-white overflow-hidden shadow-xl">
+    <div
+      className={`w-[100px] md:w-[180px] bg-[#202020] rounded-2xl border text-white overflow-hidden shadow-xl
+  ${
+    data.running
+      ? "border-red-500 shadow-[0_0_20px_rgba(34,197,94,0.8)] animate-pulse"
+      : "border-orange-500"
+  }`}
+    >
       <div className="p-3 text-xs">
         <div className="mb-3 text-end">
           <p className="text-white/50 mb-1">Frame</p>

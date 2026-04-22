@@ -8,12 +8,21 @@ type Props = {
     prompt?: string;
     quality?: string;
     style?: string;
+    running?: boolean;
+    onChange?: (value: string) => void;
   };
 };
 
 export default function VideoNode({ data }: Props): JSX.Element {
   return (
-    <div className="w-[100px]  md:w-[180px] bg-[#202020] rounded-2xl border border-blue-500 text-white overflow-hidden shadow-xl border-yellow-500">
+    <div
+      className={`w-[100px] md:w-[180px] bg-[#202020] rounded-2xl border text-white overflow-hidden shadow-xl
+  ${
+    data.running
+      ? "border-yellow-400 shadow-[0_0_20px_rgba(34,197,94,0.8)] animate-pulse"
+      : "border-cyan-500"
+  }`}
+    >
       <div className="relative w-full h-30 border-b  md:h-44 bg-[#202020] flex items-center justify-center rounded-t-2xl overflow-hidden border-b-white/70">
         {data.image ? (
           <img src={data.image} className="w-full h-full object-cover " />

@@ -15,7 +15,7 @@ type Props = {
 export default function TextNode({ data }: Props): JSX.Element {
   return (
     <div
-      className={`w-[100px] md:w-[180px] bg-[#202020] rounded-2xl border text-white overflow-hidden shadow-xl
+      className={`w-[min(82vw,260px)] md:w-[180px] bg-[#202020] rounded-2xl border text-white overflow-hidden shadow-xl
   ${
     data.running
       ? "border-green-400 shadow-[0_0_20px_rgba(34,197,94,0.8)] animate-pulse"
@@ -32,8 +32,12 @@ export default function TextNode({ data }: Props): JSX.Element {
           <textarea
             value={data.prompt || ""}
             onChange={(e) => data.onChange?.(e.target.value)}
+            onKeyDown={(e) => e.stopPropagation()}
+            onKeyUp={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
             placeholder="Enter Text"
-            className="node-scroll w-full min-h-[120px] bg-transparent p-2 rounded-lg nodrag outline-none border border-white/20 focus:border-white/40"
+            className="node-scroll nodrag nopan nowheel w-full min-h-[150px] md:min-h-[120px] bg-transparent p-2 rounded-lg outline-none border border-white/20 focus:border-white/40"
           />
         </div>
       </div>

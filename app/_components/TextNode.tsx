@@ -1,4 +1,4 @@
-import { JSX, SyntheticEvent } from "react";
+import { JSX } from "react";
 import { Handle, Position } from "reactflow";
 
 type Props = {
@@ -10,11 +10,6 @@ type Props = {
     running?: boolean;
     onChange?: (value: string) => void;
   };
-};
-
-const stopCanvasShortcut = (event: SyntheticEvent<HTMLTextAreaElement>) => {
-  event.stopPropagation();
-  event.nativeEvent.stopImmediatePropagation?.();
 };
 
 export default function TextNode({ data }: Props): JSX.Element {
@@ -37,16 +32,12 @@ export default function TextNode({ data }: Props): JSX.Element {
           <textarea
             value={data.prompt || ""}
             onChange={(e) => data.onChange?.(e.target.value)}
-            onBeforeInput={stopCanvasShortcut}
-            onInput={stopCanvasShortcut}
-            onKeyDownCapture={stopCanvasShortcut}
-            onKeyDown={stopCanvasShortcut}
-            onKeyUpCapture={stopCanvasShortcut}
-            onKeyUp={stopCanvasShortcut}
-            onPointerDownCapture={stopCanvasShortcut}
-            onPointerDown={stopCanvasShortcut}
-            onTouchStartCapture={stopCanvasShortcut}
-            onTouchStart={stopCanvasShortcut}
+            onKeyDownCapture={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            onKeyUpCapture={(e) => e.stopPropagation()}
+            onKeyUp={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
             placeholder="Enter Text"
             className="node-scroll nodrag nopan nowheel w-full min-h-[150px] md:min-h-[120px] bg-transparent p-2 rounded-lg outline-none border border-white/20 focus:border-white/40"
           />

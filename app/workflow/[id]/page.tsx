@@ -2196,6 +2196,7 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
             setSelectedNode(null);
           }}
           onNodeDragStart={() => setMenu(null)}
+          panActivationKeyCode={null}
           proOptions={{ hideAttribution: true }}
           defaultEdgeOptions={{
             type: "beizer",

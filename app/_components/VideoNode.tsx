@@ -1,62 +1,84 @@
 import { UploadIcon, Video } from "lucide-react";
-import { JSX } from "react";
+import { JSX, useRef } from "react";
 import { Handle, Position } from "reactflow";
 
 type Props = {
   data: {
-    image?: string;
-    prompt?: string;
-    quality?: string;
-    style?: string;
+    video?: string;
     running?: boolean;
-    onChange?: (value: string) => void;
+    uploading?: boolean;
+    error?: boolean;
+    errorMessage?: string;
+    onUpload?: (file: File) => void;
   };
 };
 
 export default function VideoNode({ data }: Props): JSX.Element {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const openFilePicker = () => fileRef.current?.click();
+
   return (
-    <div
-      className={`w-[100px] md:w-[180px] bg-[#202020] rounded-2xl border text-white overflow-hidden shadow-xl
+    <div className={`w-45 bg-[#202020] rounded-2xl border text-white overflow-hidden shadow-xl
   ${
     data.running
-      ? "border-yellow-400 shadow-[0_0_20px_rgba(34,197,94,0.8)] animate-pulse"
+      ? "border-green-400 shadow-[0_0_20px_rgba(34,197,94,0.8)] animate-pulse"
       : "border-cyan-500"
-  }`}
-    >
-      <div className="relative w-full h-30 border-b  md:h-44 bg-[#202020] flex items-center justify-center rounded-t-2xl overflow-hidden border-b-white/70">
-        {data.image ? (
-          <img src={data.image} className="w-full h-full object-cover " />
+      }`}>
+      <div
+        onClick={!data.video && !data.uploading ? openFilePicker : undefined}
+        className={`relative h-40 flex items-center justify-center border-b border-white/70 ${
+          !data.video && !data.uploading ? "cursor-pointer" : ""
+        }`}
+      >
+        {data.uploading ? (
+          <span className="absolute inset-0 bg-black/70 text-white/70 flex flex-col items-center justify-center text-sm">
+            Uploading...
+          </span>
+        ) : data.error ? (
+          <span className="px-3 text-center text-red-400 text-sm">
+            {data.errorMessage || "Upload failed"}
+          </span>
+        ) : data.video ? (
+          <>
+            <video
+              src={data.video}
+              className="w-full h-full object-cover"
+            />
+            <button
+              type="button"
+              aria-label="Replace video"
+              title="Replace video"
+              onClick={openFilePicker}
+              className="nodrag absolute top-2 right-2 rounded bg-black/70 p-1.5 text-white/80 hover:bg-black hover:text-white"
+            >
+              <UploadIcon className="size-4" />
+            </button>
+          </>
         ) : (
-          <span className="text-white/40 text-sm flex flex-col items-center justify-center">
-            <Video className="size-6 md:size-10 mb-1" />
+          <span className="text-white/40 flex flex-col items-center">
+            <Video className="size-8 mb-1" />
             Upload Video
           </span>
         )}
       </div>
 
-      {/* <div className="p-3 text-xs ">
-        <div className="mb-3 text-end ">
-          <p className="text-white/50 mb-1">Image</p>
-        </div>
-
-        <div className="mb-3">
-          <p className="text-white/50 mb-1">Prompt</p>
-          <textarea
-            defaultValue={data.prompt || ""}
-            placeholder="Describe your image..."
-             className="w-full min-h-[100px] bg-[#202020] p-2 rounded-lg nodrag outline-none border border-white/20 focus:border-white/40"
-          />
-        </div>
-
-        
-      </div> */}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="video/*"
+        style={{ display: "none" }}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file && data.onUpload) data.onUpload(file);
+          e.target.value = "";
+        }}
+      />
 
       <Handle
         type="target"
         position={Position.Left}
         className="bg-yellow-500 w-2 h-2"
       />
-
       <Handle
         type="source"
         position={Position.Right}

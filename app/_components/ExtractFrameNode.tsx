@@ -1,3 +1,4 @@
+import { Download, Maximize2 } from "lucide-react";
 import { JSX } from "react";
 import { Handle, Position } from "reactflow";
 
@@ -5,43 +6,88 @@ type Props = {
   data: {
     time?: string;
     format?: string;
+    image?: string;
+    output?: string;
     running?: boolean;
+    error?: boolean;
+    onParamChange?: (key: string, value: string) => void;
   };
 };
 
 export default function ExtractFrameNode({ data }: Props): JSX.Element {
+  const preview = data.output || data.image;
+
   return (
     <div
-      className={`w-[100px] md:w-[180px] bg-[#202020] rounded-2xl border text-white overflow-hidden shadow-xl
+      className={`w-[120px] md:w-[200px] bg-[#202020] rounded-2xl border text-white overflow-hidden shadow-xl
   ${
     data.running
       ? "border-red-500 shadow-[0_0_20px_rgba(34,197,94,0.8)] animate-pulse"
-      : "border-orange-500"
+      : data.error
+        ? "border-red-500"
+        : "border-orange-500"
   }`}
     >
+      {preview && (
+        <div className="border-b border-white/10 bg-black/30">
+          <div className="h-56 flex items-center justify-center p-2">
+            <img
+              src={preview}
+              alt="Extracted frame"
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <div className="flex justify-end gap-1 border-t border-white/10 px-2 py-1">
+            <a
+              href={preview}
+              target="_blank"
+              rel="noreferrer"
+              title="Open full preview"
+              className="nodrag rounded p-1 text-white/55 hover:bg-white/10 hover:text-white"
+            >
+              <Maximize2 className="size-3.5" />
+            </a>
+            <a
+              href={preview}
+              download
+              title="Download frame"
+              className="nodrag rounded p-1 text-white/55 hover:bg-white/10 hover:text-white"
+            >
+              <Download className="size-3.5" />
+            </a>
+          </div>
+        </div>
+      )}
+
       <div className="p-3 text-xs">
         <div className="mb-3 text-end">
           <p className="text-white/50 mb-1">Frame</p>
         </div>
 
         <div className="mb-2">
-          <p className="text-white/50 mb-1">Time (s)</p>
+          <p className="text-white/50 mb-1">Timestamp</p>
           <input
-            defaultValue={data.time || ""}
-            className="w-full bg-[#202020] p-1 rounded border border-white/20 outline-none"
+            value={data.time || "0"}
+            onChange={(e) => data.onParamChange?.("time", e.target.value)}
+            placeholder="0 or 50%"
+            className="w-full bg-[#202020] p-1 rounded border border-white/20 outline-none nodrag"
           />
         </div>
 
         <div>
           <p className="text-white/50 mb-1">Format</p>
-          <input
-            defaultValue={data.format || "png"}
-            className="w-full bg-[#202020] p-1 rounded border border-white/20 outline-none"
-          />
+          <select
+            value={data.format || "jpg"}
+            onChange={(e) => data.onParamChange?.("format", e.target.value)}
+            className="node-scroll w-full bg-[#202020] p-1 rounded border border-white/20 outline-none nodrag"
+          >
+            <option value="jpg">jpg</option>
+            <option value="png">png</option>
+          </select>
         </div>
       </div>
 
-      <Handle type="target" position={Position.Left} className="bg-yellow-500 w-10 h-10" />
+      <Handle type="target" position={Position.Left} className="bg-yellow-500 w-2 h-2" />
       <Handle type="source" position={Position.Right} className="bg-red-500 w-2 h-2" />
     </div>
   );

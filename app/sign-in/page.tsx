@@ -5,13 +5,9 @@ import { JSX, useState } from "react";
 
 export default function SignInPage(): JSX.Element {
   const { redirectToSignIn } = useClerk();
-  const { signIn } = useSignIn();
+  useSignIn();
 
   const [email, setEmail] = useState<string>("");
-  const [otp, setOtp] = useState<string>("");
-  const [step, setStep] = useState<"email" | "otp">("email");
-
-  // if (!isLoaded) return <div className="text-white">Loading...</div>;
 
 const handleGoogle = async () => {
   await redirectToSignIn({
@@ -27,8 +23,10 @@ const handleEmail = async (): Promise<void> => {
         emailAddress: email,
       },
     });
-  } catch (err) {
-    console.error(err);
+  } catch {
+    await redirectToSignIn({
+      signInForceRedirectUrl: "/",
+    });
   }
 };
 
@@ -40,18 +38,18 @@ const handleEmail = async (): Promise<void> => {
             Sign up to generate for free
           </h1>
 
-          {step === "email" && (
+          {(
             <>
               <button
                 onClick={handleGoogle}
                 className="bg-white text-black p-3 rounded-lg mb-4 flex items-center justify-center gap-2"
               >
-                <img src="/images/google.svg" className="w-5 h-5" />
+                <img src="/images/google.svg" className="w-5 h-5" alt="" />
                 Continue with Google
               </button>
 
               <button className="bg-white/90 text-black p-3 rounded-lg mb-4 flex items-center justify-center gap-2">
-                <img src="/images/apple.png" className="w-5 h-5" />
+                <img src="/images/apple.png" className="w-5 h-5" alt="" />
                 Continue with Apple
               </button>
 
@@ -91,6 +89,7 @@ const handleEmail = async (): Promise<void> => {
           <img
             src="/images/auth-right.webp"
             className="h-full w-full object-cover"
+            alt=""
           />
         </div>
       </div>

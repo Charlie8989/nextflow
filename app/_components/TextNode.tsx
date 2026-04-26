@@ -33,7 +33,7 @@ export default function TextNode({ data }: Props): JSX.Element {
             value={data.prompt || ""}
             onChange={(e) => data.onChange?.(e.target.value)}
             placeholder="Enter Text"
-            className="w-full min-h-[120px] bg-transparent p-2 rounded-lg nodrag outline-none border border-white/20 focus:border-white/40"
+            className="node-scroll w-full min-h-[120px] bg-transparent p-2 rounded-lg nodrag outline-none border border-white/20 focus:border-white/40"
           />
         </div>
       </div>

@@ -7,10 +7,15 @@ type Props = {
     model?: string;
     running?: boolean;
     onChange?: (value: string) => void;
+    onModelChange?: (value: string) => void;
   };
 };
 
 export default function LLMNode({ data }: Props): JSX.Element {
+  const selectedModel = data.model?.startsWith("gemini-")
+    ? data.model
+    : "gemini-2.5-flash";
+
   return (
     <div
       className={`w-[100px] md:w-[180px] bg-[#202020] rounded-2xl border text-white overflow-hidden shadow-xl
@@ -30,21 +35,19 @@ export default function LLMNode({ data }: Props): JSX.Element {
           <textarea
             value={data.prompt || ""}
             onChange={(e) => data.onChange?.(e.target.value)}
-            className="w-full min-h-[80px] bg-[#202020] p-2 rounded border border-white/20 outline-none"
+            className="node-scroll w-full min-h-[80px] bg-[#202020] p-2 rounded border border-white/20 outline-none"
           />
         </div>
 
         <div>
           <p className="text-white/50 mb-1">Model</p>
           <select
-            defaultValue={data.model || "gpt-4o-mini"}
-            className="w-full bg-[#202020] p-1 rounded border border-white/20 outline-none"
+            value={selectedModel}
+            onChange={(e) => data.onModelChange?.(e.target.value)}
+            className="node-scroll w-full bg-[#202020] p-1 rounded border border-white/20 outline-none"
           >
-            <option value="gpt-4o-mini">Gemini (Free)</option>
-            <option disabled>────────────</option>
-            <option disabled>gpt-4o (Pro)</option>
-            <option disabled>claude-3-opus (Pro)</option>
-            <option disabled>gemini-1.5-pro (Pro)</option>
+            <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+            <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
           </select>
         </div>
       </div>

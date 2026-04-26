@@ -57,8 +57,7 @@ const isUsableImage = (value?: string) =>
   Boolean(
     value &&
       (value.startsWith("data:image/") ||
-        /\.(png|jpe?g|webp|gif|avif)(\?|$)/i.test(value) ||
-        /^https?:\/\//i.test(value)),
+        /\.(png|jpe?g|webp|gif|avif)(\?|$)/i.test(value)),
   );
 
 const isUsableVideo = (value?: string) =>
@@ -67,6 +66,44 @@ const isUsableVideo = (value?: string) =>
       (value.startsWith("data:video/") ||
         /\.(mp4|mov|webm|mpeg|mpg|avi|wmv|3gp)(\?|$)/i.test(value)),
   );
+
+const getBackendUrl = () => {
+  const configured = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
+
+  if (!configured) {
+    throw new Error("NEXT_PUBLIC_BACKEND_URL is not configured");
+  }
+
+  return configured.replace(/\/$/, "");
+};
+
+const getApiUrl = (path: string) => `${getBackendUrl()}${path}`;
+
+const readApiError = async (res: Response) => {
+  const text = await res.text().catch(() => "");
+
+  try {
+    return JSON.parse(text)?.error || text || `Request failed: ${res.status}`;
+  } catch {
+    return text || `Request failed: ${res.status}`;
+  }
+};
+
+const fetchApiJson = async <T,>(path: string, init?: RequestInit): Promise<T> => {
+  let res: Response;
+
+  try {
+    res = await fetch(getApiUrl(path), init);
+  } catch {
+    throw new Error(`Could not reach backend at ${getBackendUrl()}`);
+  }
+
+  if (!res.ok) {
+    throw new Error(await readApiError(res));
+  }
+
+  return res.json() as Promise<T>;
+};
 
 const getWorkflowThumbnail = (workflow: WorkflowSummary): WorkflowThumbnail => {
   if (workflow.image && isUsableImage(workflow.image)) {
@@ -392,6 +429,7 @@ function DashboardHome(): JSX.Element {
   const [open, setOpen] = useState<boolean>(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<DashboardTab>("projects");
+  const [dashboardError, setDashboardError] = useState("");
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -409,23 +447,18 @@ function DashboardHome(): JSX.Element {
   const createWorkflow = async () => {
     if (!user) return;
 
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/workflow`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          clerkId: user.id,
-          name: "Untitled Workflow",
-          nodes: [],
-          edges: [],
-        }),
+    const data = await fetchApiJson<{ id: string }>("/api/workflow", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-    );
-
-    const data = await res.json();
+      body: JSON.stringify({
+        clerkId: user.id,
+        name: "Untitled Workflow",
+        nodes: [],
+        edges: [],
+      }),
+    });
 
     router.push(`/workflow/${data.id}`);
   };
@@ -438,13 +471,18 @@ function DashboardHome(): JSX.Element {
       return;
     }
 
-    await createWorkflow();
+    try {
+      setDashboardError("");
+      await createWorkflow();
+    } catch (error: any) {
+      setDashboardError(error?.message || "Could not create workflow.");
+    }
   };
 
   useEffect(() => {
     if (!user) return;
 
-    fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/user`, {
+    fetchApiJson("/api/user", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -455,16 +493,21 @@ function DashboardHome(): JSX.Element {
         name: user.fullName,
         imageUrl: user.imageUrl,
       }),
+    }).catch((error: any) => {
+      setDashboardError(error?.message || "Could not sync user profile.");
     });
   }, [user]);
 
   useEffect(() => {
     if (!isLoaded || !user) return;
 
-    void fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/workflow/${user.id}`)
-      .then((res) => res.json())
+    void fetchApiJson<WorkflowSummary[]>(`/api/workflow/${user.id}`)
       .then((data: WorkflowSummary[]) => {
         setWorkflows(data || []);
+        setDashboardError("");
+      })
+      .catch((error: any) => {
+        setDashboardError(error?.message || "Could not load workflows.");
       });
   }, [isLoaded, user]);
 
@@ -474,20 +517,24 @@ function DashboardHome(): JSX.Element {
   };
 
   const handleDelete = async (id: string) => {
-    await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/workflow/${id}`, {
-      method: "DELETE",
-    });
+    try {
+      await fetchApiJson(`/api/workflow/${id}`, {
+        method: "DELETE",
+      });
 
-    setWorkflows((prev) => prev.filter((w) => w.id !== id));
+      setWorkflows((prev) => prev.filter((w) => w.id !== id));
+      setDashboardError("");
+    } catch (error: any) {
+      setDashboardError(error?.message || "Could not delete workflow.");
+    }
   };
 
   const openExampleWorkflow = async (example: ExampleWorkflow) => {
     if (!user) return;
 
     const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/workflow`,
-      {
+    try {
+      const data = await fetchApiJson<{ id: string }>("/api/workflow", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -499,16 +546,36 @@ function DashboardHome(): JSX.Element {
           nodes: clone(example.nodes),
           edges: clone(example.edges),
         }),
-      },
-    );
+      });
 
-    const data = await res.json();
-
-    router.push(`/workflow/${data.id}`);
+      setDashboardError("");
+      router.push(`/workflow/${data.id}`);
+    } catch (error: any) {
+      setDashboardError(error?.message || "Could not open example workflow.");
+    }
   };
 
   return (
     <div className="fixed inset-0 flex overflow-hidden bg-black text-white">
+      {dashboardError && (
+        <div className="fixed right-4 top-4 z-[100] w-[min(360px,calc(100vw-2rem))] rounded-lg border border-red-400/40 bg-red-950/95 p-4 text-sm text-red-50 shadow-2xl shadow-black/50">
+          <div className="mb-1 flex items-center justify-between gap-3">
+            <span className="text-xs font-semibold uppercase tracking-wide text-red-200">
+              Backend error
+            </span>
+            <button
+              type="button"
+              onClick={() => setDashboardError("")}
+              className="rounded px-1.5 text-red-100/70 hover:bg-red-900 hover:text-red-50"
+              aria-label="Dismiss backend error"
+            >
+              x
+            </button>
+          </div>
+          <p className="leading-relaxed">{dashboardError}</p>
+        </div>
+      )}
+
       <div className="relative hidden h-screen w-[72px] shrink-0 flex-col items-center border-r border-white/10 bg-[#0b0b0b] py-4 md:flex">
         <div className="relative mt-auto" ref={ref}>
           {isLoaded && user ? (

@@ -77,6 +77,16 @@ const nodeTypes = {
   outputNode: OutputNode,
 };
 
+const getBackendUrl = () => {
+  const configured = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
+
+  if (!configured) {
+    throw new Error("NEXT_PUBLIC_BACKEND_URL is not configured");
+  }
+
+  return configured.replace(/\/$/, "");
+};
+
 export default function WorkflowPage(): JSX.Element {
   const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode[]>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
@@ -116,7 +126,7 @@ export default function WorkflowPage(): JSX.Element {
   };
   const uploadVideo = async (file: File) => {
     const uploadResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/video/upload-direct`,
+      `${getBackendUrl()}/api/video/upload-direct`,
       {
       method: "POST",
         headers: {
@@ -143,7 +153,7 @@ export default function WorkflowPage(): JSX.Element {
 
   const uploadImage = async (file: File) => {
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/image/upload-url`,
+      `${getBackendUrl()}/api/image/upload-url`,
     );
 
     const data = await res.json();
@@ -197,7 +207,7 @@ export default function WorkflowPage(): JSX.Element {
     }
 
     const supabaseRes = await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_URL}/upload-image`,
+      `${getBackendUrl()}/upload-image`,
       {
         method: "POST",
         headers: {
@@ -714,7 +724,7 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
     const dataUrl = await blobUrlToDataUrl(image);
     const mimeType = dataUrl.match(/^data:(.+);base64,/)?.[1] || "image/jpeg";
     const uploadRes = await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/image/upload-base64`,
+      `${getBackendUrl()}/api/image/upload-base64`,
       {
         method: "POST",
         headers: {
@@ -980,7 +990,7 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
 
       try {
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/crop-image`,
+          `${getBackendUrl()}/api/crop-image`,
           {
             method: "POST",
             headers: {
@@ -1048,7 +1058,7 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
 
       try {
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/extract-frame`,
+          `${getBackendUrl()}/api/extract-frame`,
           {
             method: "POST",
             headers: {
@@ -1238,7 +1248,7 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
         );
 
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/run-image`,
+          `${getBackendUrl()}/api/run-image`,
           {
             method: "POST",
             headers: {
@@ -1347,7 +1357,7 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
         );
 
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/run-video`,
+          `${getBackendUrl()}/api/run-video`,
           {
             method: "POST",
             headers: {
@@ -1545,7 +1555,7 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
         }
 
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/run-llm`,
+          `${getBackendUrl()}/api/run-llm`,
           {
             method: "POST",
             headers: {
@@ -1733,7 +1743,7 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
     const workflowId = window.location.pathname.split("/").pop();
 
     await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/workflow/${workflowId}`,
+      `${getBackendUrl()}/api/workflow/${workflowId}`,
       {
         method: "PUT",
         headers: {
@@ -1784,7 +1794,7 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
     const id = window.location.pathname.split("/").pop();
 
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/workflow/single/${id}`,
+      `${getBackendUrl()}/api/workflow/single/${id}`,
     );
 
     const data = await res.json();
@@ -2408,3 +2418,4 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
     </div>
   );
 }
+

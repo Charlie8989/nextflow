@@ -15,6 +15,15 @@ const sampleWorkflowImage =
 const sampleWorkflowOutput =
   "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1777238427925-ad5306e1.png";
 
+const sampleWorkflow2Video =
+  "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-video-1777245515750-hdic1lfts9g.mp4";
+
+const sampleWorkflow2Frame =
+  "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1777245574573-b437469e.jpg";
+
+const sampleWorkflow2Output =
+  "Unveiling something special! Get ready to experience the innovation that's got everyone talking. Dive into the details and see the magic for yourself. Shop now! #NewProduct #Innovation #MustHave";
+
 export const exampleWorkflows: ExampleWorkflow[] = [
   {
     id: "sample-workflow-1",
@@ -179,6 +188,168 @@ export const exampleWorkflows: ExampleWorkflow[] = [
         id: "edge-llm-1777238632520-output-llm-1777238632520",
         source: "llm-1777238632520",
         target: "output-llm-1777238632520",
+      },
+    ],
+  },
+  {
+    id: "sample-workflow-2",
+    name: "Sample Workflow - 2",
+    description: "Extract a video frame and generate a social media post.",
+    image: sampleWorkflow2Frame,
+    nodes: [
+      {
+        id: "video-1777245513158",
+        type: "videoNode",
+        position: {
+          x: -79.36607904296108,
+          y: 128.76045888602053,
+        },
+        data: {
+          label: "video",
+          prompt: "",
+          running: false,
+          uploading: false,
+          video: sampleWorkflow2Video,
+          uploadedVideo: sampleWorkflow2Video,
+          error: false,
+          errorMessage: "",
+          output: sampleWorkflow2Video,
+        },
+        width: 180,
+        height: 162,
+      },
+      {
+        id: "frame-1777245518774",
+        type: "extractFrame",
+        position: {
+          x: 302.9253332393204,
+          y: 330.37844105018286,
+        },
+        data: {
+          label: "frame",
+          prompt: "",
+          time: "5",
+          format: "jpg",
+          image: sampleWorkflow2Frame,
+          output: sampleWorkflow2Frame,
+          error: false,
+          running: false,
+          uploadedImage: sampleWorkflow2Frame,
+          model: "",
+          provider: "",
+        },
+        width: 200,
+        height: 408,
+      },
+      {
+        id: "output-frame-1777245518774",
+        type: "outputNode",
+        position: {
+          x: 622.9253332393205,
+          y: 266.71834525674615,
+        },
+        data: {
+          label: "output",
+          autoOutputFor: "frame-1777245518774",
+          running: false,
+          output: sampleWorkflow2Frame,
+        },
+        width: 280,
+        height: 202,
+      },
+      {
+        id: "text-1777245608728",
+        type: "textNode",
+        position: {
+          x: 696.7120779573479,
+          y: -148.54217312795956,
+        },
+        data: {
+          label: "text",
+          prompt:
+            "You are a social media manager. Create a tweet-length marketing post based on the product image and video frame.",
+          running: false,
+        },
+        width: 180,
+        height: 210,
+      },
+      {
+        id: "llm-1777245643070",
+        type: "llmNode",
+        position: {
+          x: 1057.3944650539352,
+          y: 77.9349644607603,
+        },
+        data: {
+          label: "llm",
+          prompt: "do as the text node say",
+          model: "gemini-2.5-flash",
+          running: false,
+          output: sampleWorkflow2Output,
+          error: false,
+        },
+        width: 180,
+        height: 214,
+      },
+      {
+        id: "output-llm-1777245643070",
+        type: "outputNode",
+        position: {
+          x: 1377.3944650539352,
+          y: 77.9349644607603,
+        },
+        data: {
+          label: "output",
+          autoOutputFor: "llm-1777245643070",
+          running: false,
+          output: sampleWorkflow2Output,
+        },
+        width: 280,
+        height: 201,
+      },
+    ],
+    edges: [
+      {
+        id: "reactflow__edge-video-1777245513158-frame-1777245518774",
+        source: "video-1777245513158",
+        target: "frame-1777245518774",
+        type: "beizer",
+        style: {
+          stroke: "#60a5fa",
+          strokeWidth: 3,
+        },
+      },
+      {
+        id: "edge-frame-1777245518774-output-frame-1777245518774",
+        source: "frame-1777245518774",
+        target: "output-frame-1777245518774",
+        type: "pulse",
+      },
+      {
+        id: "reactflow__edge-output-frame-1777245518774-llm-1777245643070",
+        source: "output-frame-1777245518774",
+        target: "llm-1777245643070",
+        type: "beizer",
+        style: {
+          stroke: "#60a5fa",
+          strokeWidth: 3,
+        },
+      },
+      {
+        id: "reactflow__edge-text-1777245608728-llm-1777245643070",
+        source: "text-1777245608728",
+        target: "llm-1777245643070",
+        type: "beizer",
+        style: {
+          stroke: "#60a5fa",
+          strokeWidth: 3,
+        },
+      },
+      {
+        id: "edge-llm-1777245643070-output-llm-1777245643070",
+        source: "llm-1777245643070",
+        target: "output-llm-1777245643070",
+        type: "pulse",
       },
     ],
   },

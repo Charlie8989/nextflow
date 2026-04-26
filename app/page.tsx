@@ -1,7 +1,7 @@
 "use client";
 
 import { useUser, useClerk } from "@clerk/nextjs";
-import { Trash2 } from "lucide-react";
+import { LogOut, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useRef, useEffect, JSX } from "react";
 import { exampleWorkflows, ExampleWorkflow } from "@/app/_data/exampleWorkflows";
@@ -430,11 +430,16 @@ function DashboardHome(): JSX.Element {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<DashboardTab>("projects");
   const [dashboardError, setDashboardError] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
+  const desktopAccountRef = useRef<HTMLDivElement>(null);
+  const mobileAccountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as globalThis.Node)) {
+      const target = e.target as globalThis.Node;
+      const clickedDesktopAccount = desktopAccountRef.current?.contains(target);
+      const clickedMobileAccount = mobileAccountRef.current?.contains(target);
+
+      if (!clickedDesktopAccount && !clickedMobileAccount) {
         setOpen(false);
       }
     };
@@ -516,6 +521,9 @@ function DashboardHome(): JSX.Element {
     await signOut({ redirectUrl: "/" });
   };
 
+  const accountLabel =
+    user?.username || user?.primaryEmailAddress?.emailAddress || user?.fullName;
+
   const handleDelete = async (id: string) => {
     try {
       await fetchApiJson(`/api/workflow/${id}`, {
@@ -577,7 +585,7 @@ function DashboardHome(): JSX.Element {
       )}
 
       <div className="relative hidden h-screen w-[72px] shrink-0 flex-col items-center border-r border-white/10 bg-[#0b0b0b] py-4 md:flex">
-        <div className="relative mt-auto" ref={ref}>
+        <div className="relative mt-auto" ref={desktopAccountRef}>
           {isLoaded && user ? (
             <img
               src={user.imageUrl}
@@ -596,7 +604,7 @@ function DashboardHome(): JSX.Element {
 
                 <div className="mt-2 rounded-lg bg-white/5 p-2">
                   <p className="text-sm font-medium">
-                    {user?.username || user?.primaryEmailAddress?.emailAddress}
+                    {accountLabel}
                   </p>
                   <p className="text-xs text-white/50">Free</p>
                 </div>
@@ -648,6 +656,48 @@ function DashboardHome(): JSX.Element {
           />
 
           <div className="absolute inset-0 bg-black/40" />
+
+          <div
+            ref={mobileAccountRef}
+            className="absolute right-4 top-4 z-20 md:hidden"
+          >
+            {isLoaded && user ? (
+              <button
+                type="button"
+                onClick={() => setOpen((p) => !p)}
+                className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl border border-white/15 bg-black/45 shadow-lg"
+                aria-label="Open account menu"
+              >
+                <img
+                  src={user.imageUrl}
+                  alt="Account"
+                  className="h-full w-full object-cover"
+                />
+              </button>
+            ) : (
+              <div className="h-11 w-11 rounded-xl bg-white/10" />
+            )}
+
+            {open && (
+              <div className="absolute right-0 top-14 w-[min(260px,calc(100vw-2rem))] rounded-xl border border-white/10 bg-[#0b0b0b] p-3 shadow-2xl shadow-black/60">
+                <div className="rounded-lg bg-white/5 p-3">
+                  <p className="truncate text-sm font-medium">
+                    {accountLabel || "Account"}
+                  </p>
+                  <p className="mt-1 text-xs text-white/50">Free</p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleLogOut}
+                  className="mt-3 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-300 hover:bg-red-500/10 hover:text-red-200"
+                >
+                  <LogOut size={16} />
+                  Log out
+                </button>
+              </div>
+            )}
+          </div>
 
           <div className="relative z-10 mx-8 max-w-2xl px-6 md:mx-12 md:px-12">
             <div className="mb-6 flex items-center gap-3">

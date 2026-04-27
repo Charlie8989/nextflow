@@ -1,37 +1,94 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎨 NextFlow – Krea AI Clone
 
-## Getting Started
+NextFlow is an AI-powered creative automation platform inspired by Krea AI.  
+It enables users to create intelligent workflows that process images using AI (Google Vision) and execute actions step-by-step.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🚀 Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- 🧠 AI Image Understanding (Google Vision API)
+- 🔗 Node-based Workflow System
+- ⚡ Real-time Workflow Execution
+- 🖼️ Image → Text → Action Pipelines
+- 🔐 Authentication with Clerk
+- 🌐 Full-stack App (Next.js + Node.js)
+- ☁️ Deployment Ready
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🧠 How It Works
 
-## Learn More
+1. Upload an image  
+2. Google Vision analyzes it  
+3. Extracted data (text/labels) flows through nodes  
+4. Each node performs an action  
+5. Final output is generated  
 
-To learn more about Next.js, take a look at the following resources:
+**Example Flow:**  
+Upload Image → Extract Text → Process Data → Trigger Action  
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🛠️ Tech Stack
 
-## Deploy on Vercel
+### Frontend
+- Next.js  
+- Tailwind CSS  
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Backend
+- Node.js  
+- Express  
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-"# nextflow" 
+### Database
+- PostgreSQL  
+- Prisma ORM  
+
+### Integrations
+- Google Cloud Vision API  
+- Clerk Authentication  
+
+---
+
+## 📁 Project Structure
+nextflow/
+├── frontend/ # Next.js app
+├── backend/ # Node.js server
+├── prisma/ # Database schema
+├── workflows/ # Workflow engine logic
+└── README.md
+
+
+---
+
+☁️ Deployment
+Frontend → Vercel
+Backend → Render / VPS
+
+Make sure to:
+
+Configure environment variables
+Enable CORS
+Use production API keys
+🔮 Future Improvements
+🎨 Text-to-image generation
+🧩 Drag & Drop Workflow Builder
+🔗 Webhook & API triggers
+📊 Workflow execution logs
+🤖 More AI integrations
+🤝 Contributing
+
+Contributions are welcome!
+Feel free to fork this repo and submit a PR.
+
+⚠️ Disclaimer
+
+This project is inspired by Krea AI and is built for educational purposes only.
+It is not affiliated with or endorsed by Krea AI.
+
+⭐ Support
+
+If you like this project, give it a ⭐ on GitHub!
+
+
+---

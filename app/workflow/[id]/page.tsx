@@ -125,30 +125,78 @@ export default function WorkflowPage(): JSX.Element {
     return (file as any)?.ssl_url || (file as any)?.url || null;
   };
   const uploadVideo = async (file: File) => {
-    const uploadResponse = await fetch(
-      `${getBackendUrl()}/api/video/upload-direct`,
-      {
-      method: "POST",
-        headers: {
-          "Content-Type": file.type || "video/mp4",
-          "X-File-Name": encodeURIComponent(file.name),
-        },
-        body: file,
-      },
-    );
+    const res = await fetch(`${getBackendUrl()}/api/video/upload-url`);
+    const data = await res.json();
 
-    if (!uploadResponse.ok) {
-      const errorText = await uploadResponse.text();
-      throw new Error(getBackendErrorMessage(uploadResponse.status, errorText));
+    const uploadUrl = data.uploadUrl;
+    const assemblyId = data.assemblyId;
+    const params = data.params;
+
+    if (!uploadUrl || !assemblyId) {
+      throw new Error("Upload URL or Assembly ID missing");
     }
 
-    const data = await uploadResponse.json();
+    const formData = new FormData();
+    formData.append("file", file, file.name);
+    formData.append(
+      "params",
+      typeof params === "string" ? params : JSON.stringify(params),
+    );
 
-    if (!data.url) {
+    const uploadResponse = await fetch(uploadUrl, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error(
+        `Video upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`,
+      );
+    }
+
+    let result;
+    for (let i = 0; i < 20; i++) {
+      const pollRes = await fetch(
+        `https://api2.transloadit.com/assemblies/${assemblyId}?fields=uploads,results`,
+      );
+
+      result = await pollRes.json();
+
+      if (result?.ok === "ASSEMBLY_COMPLETED") {
+        break;
+      }
+
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+
+    const transloaditUrl = getTransloaditUrl(result);
+
+    if (!transloaditUrl) {
+      throw new Error("No video URL from Transloadit");
+    }
+
+    const supabaseRes = await fetch(`${getBackendUrl()}/upload-image`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ fileUrl: transloaditUrl }),
+    });
+
+    if (!supabaseRes.ok) {
+      const errorText = await supabaseRes.text();
+      throw new Error(
+        getBackendErrorMessage(supabaseRes.status, errorText),
+      );
+    }
+
+    const supabaseData = await supabaseRes.json();
+
+    if (!supabaseData.url) {
       throw new Error("Video upload did not return a URL");
     }
 
-    return data.url;
+    return supabaseData.url;
   };
 
   const uploadImage = async (file: File) => {

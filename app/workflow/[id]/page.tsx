@@ -124,17 +124,55 @@ export default function WorkflowPage(): JSX.Element {
 
     return (file as any)?.ssl_url || (file as any)?.url || null;
   };
+
+  const getTransloaditCreateUrl = (uploadUrl?: string | null) => {
+    if (!uploadUrl) {
+      return "https://api2.transloadit.com/assemblies";
+    }
+
+    try {
+      const url = new URL(uploadUrl);
+
+      if (
+        url.hostname.endsWith(".transloadit.com") &&
+        /^\/assemblies\/[^/]+$/.test(url.pathname)
+      ) {
+        return `${url.protocol}//${url.hostname}/assemblies`;
+      }
+
+      return uploadUrl;
+    } catch {
+      return "https://api2.transloadit.com/assemblies";
+    }
+  };
+
   const uploadVideo = async (file: File) => {
+    console.log("[video-upload] start", {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      backendUrl: getBackendUrl(),
+    });
+
     const res = await fetch(`${getBackendUrl()}/api/video/upload-url`);
     const data = await res.json();
+    console.log("[video-upload] config response", {
+      status: res.status,
+      ok: res.ok,
+      data,
+    });
 
-    const uploadUrl = data.uploadUrl;
-    const assemblyId = data.assemblyId;
+    const uploadUrl = getTransloaditCreateUrl(data.uploadUrl);
     const params = data.params;
     const signature = data.signature;
 
-    if (!uploadUrl || !assemblyId) {
-      throw new Error("Upload URL or Assembly ID missing");
+    if (!uploadUrl || !params) {
+      console.error("[video-upload] missing upload config", {
+        uploadUrl,
+        hasParams: Boolean(params),
+        hasSignature: Boolean(signature),
+      });
+      throw new Error("Upload URL or params missing");
     }
 
     const formData = new FormData();
@@ -147,6 +185,12 @@ export default function WorkflowPage(): JSX.Element {
       formData.append("signature", signature);
     }
 
+    console.log("[video-upload] transloadit request", {
+      uploadUrl,
+      normalizedFrom: data.uploadUrl,
+      hasSignature: Boolean(signature),
+    });
+
     const uploadResponse = await fetch(uploadUrl, {
       method: "POST",
       body: formData,
@@ -154,9 +198,26 @@ export default function WorkflowPage(): JSX.Element {
 
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text();
+      console.error("[video-upload] transloadit upload failed", {
+        status: uploadResponse.status,
+        statusText: uploadResponse.statusText,
+        body: errorText,
+      });
       throw new Error(
         `Video upload failed: ${uploadResponse.status}${errorText ? ` ${errorText}` : ""}`,
       );
+    }
+
+    const uploadData = await uploadResponse.json();
+    const assemblyId = uploadData?.assembly_id;
+    console.log("[video-upload] transloadit upload success", {
+      assemblyId,
+      uploadData,
+    });
+
+    if (!assemblyId) {
+      console.error("[video-upload] missing assembly id", { uploadData });
+      throw new Error("Video upload assembly ID missing");
     }
 
     let result;
@@ -166,8 +227,16 @@ export default function WorkflowPage(): JSX.Element {
       );
 
       result = await pollRes.json();
+      console.log("[video-upload] poll", {
+        attempt: i + 1,
+        status: pollRes.status,
+        ok: pollRes.ok,
+        assemblyId,
+        result,
+      });
 
       if (result?.error) {
+        console.error("[video-upload] assembly error", result);
         throw new Error(
           typeof result.error === "string"
             ? result.error
@@ -183,11 +252,24 @@ export default function WorkflowPage(): JSX.Element {
     }
 
     const transloaditUrl = getTransloaditUrl(result);
+    console.log("[video-upload] transloadit result url", {
+      assemblyId,
+      transloaditUrl,
+      result,
+    });
 
     if (!transloaditUrl) {
+      console.error("[video-upload] missing transloadit result url", {
+        assemblyId,
+        result,
+      });
       throw new Error("No video URL from Transloadit");
     }
 
+    console.log("[video-upload] copying to supabase", {
+      assemblyId,
+      transloaditUrl,
+    });
     const supabaseRes = await fetch(`${getBackendUrl()}/upload-image`, {
       method: "POST",
       headers: {
@@ -198,12 +280,22 @@ export default function WorkflowPage(): JSX.Element {
 
     if (!supabaseRes.ok) {
       const errorText = await supabaseRes.text();
+      console.error("[video-upload] supabase copy failed", {
+        status: supabaseRes.status,
+        statusText: supabaseRes.statusText,
+        body: errorText,
+      });
       throw new Error(getBackendErrorMessage(supabaseRes.status, errorText));
     }
 
     const supabaseData = await supabaseRes.json();
+    console.log("[video-upload] complete", {
+      assemblyId,
+      supabaseData,
+    });
 
     if (!supabaseData.url) {
+      console.error("[video-upload] missing final video url", { supabaseData });
       throw new Error("Video upload did not return a URL");
     }
 

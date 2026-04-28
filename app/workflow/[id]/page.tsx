@@ -1,5 +1,7 @@
 "use client";
 
+import { useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import { useState, useCallback, JSX, useEffect, useRef } from "react";
 import { ConnectionLineType } from "reactflow";
 import ReactFlow, {
@@ -87,7 +89,12 @@ const getBackendUrl = () => {
   return configured.replace(/\/$/, "");
 };
 
+const getWorkflowIdFromPath = () =>
+  window.location.pathname.split("/").filter(Boolean).pop() || "";
+
 export default function WorkflowPage(): JSX.Element {
+  const router = useRouter();
+  const { isLoaded: isUserLoaded, isSignedIn, user } = useUser();
   const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode[]>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
   const [history, setHistory] = useState<Record<string, any[]>>({});
@@ -96,6 +103,8 @@ export default function WorkflowPage(): JSX.Element {
   const [isWorkflowRunning, setIsWorkflowRunning] = useState(false);
   const [uiError, setUiError] = useState("");
   const [quotaDialog, setQuotaDialog] = useState("");
+  const [accessError, setAccessError] = useState("");
+  const [hasWorkflowAccess, setHasWorkflowAccess] = useState(false);
   const stopWorkflowRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const runOutputsRef = useRef<Record<string, string>>({});
@@ -1908,7 +1917,7 @@ export default function WorkflowPage(): JSX.Element {
   };
 
   const saveWorkflow = async () => {
-    const workflowId = window.location.pathname.split("/").pop();
+    const workflowId = getWorkflowIdFromPath();
 
     await fetch(`${getBackendUrl()}/api/workflow/${workflowId}`, {
       method: "PUT",
@@ -1925,7 +1934,7 @@ export default function WorkflowPage(): JSX.Element {
   };
 
   const exportWorkflowJson = () => {
-    const workflowId = window.location.pathname.split("/").pop();
+    const workflowId = getWorkflowIdFromPath();
     const payload = {
       id: workflowId,
       name,
@@ -1951,16 +1960,37 @@ export default function WorkflowPage(): JSX.Element {
   };
 
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded || !hasWorkflowAccess) return;
     saveWorkflow();
-  }, [nodes, edges, name, history, isLoaded, saveWorkflow]);
+  }, [nodes, edges, name, history, isLoaded, hasWorkflowAccess, saveWorkflow]);
 
-  const loadWorkflow = async () => {
-    const id = window.location.pathname.split("/").pop();
+  const loadWorkflow = async (clerkId: string) => {
+    const workflowId = getWorkflowIdFromPath();
 
-    const res = await fetch(`${getBackendUrl()}/api/workflow/single/${id}`);
+    if (!workflowId) {
+      setAccessError("This workflow link is invalid.");
+      setHasWorkflowAccess(false);
+      return;
+    }
 
-    const data = await res.json();
+    const res = await fetch(`${getBackendUrl()}/api/workflow/${clerkId}`);
+
+    if (!res.ok) {
+      setAccessError("Could not verify access to this workflow.");
+      setHasWorkflowAccess(false);
+      return;
+    }
+
+    const workflows = await res.json();
+    const data = Array.isArray(workflows)
+      ? workflows.find((workflow: { id?: string }) => workflow.id === workflowId)
+      : null;
+
+    if (!data) {
+      setAccessError("You do not have access to this workflow.");
+      setHasWorkflowAccess(false);
+      return;
+    }
 
     const attachHandlers = (nodes: Node[]) => {
       return nodes.map((node) => {
@@ -2153,12 +2183,42 @@ export default function WorkflowPage(): JSX.Element {
     setEdges(data.edges || []);
     setName(data.name || "Untitled Workflow");
     setHistory(data.history || {});
+    setAccessError("");
+    setHasWorkflowAccess(true);
     setIsLoaded(true);
   };
 
   useEffect(() => {
-    loadWorkflow();
-  }, []);
+    if (!isUserLoaded) return;
+
+    if (!isSignedIn || !user) {
+      router.replace("/sign-in");
+      return;
+    }
+
+    loadWorkflow(user.id);
+  }, [isSignedIn, isUserLoaded, router, user]);
+
+  if (!isUserLoaded || (!isLoaded && !accessError)) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-black text-sm text-white/70">
+        Loading workflow...
+      </div>
+    );
+  }
+
+  if (accessError) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-black px-6 text-center text-white">
+        <div className="max-w-md rounded-2xl border border-white/10 bg-white/5 p-6">
+          <h1 className="text-lg font-semibold">Workflow access blocked</h1>
+          <p className="mt-2 text-sm leading-relaxed text-white/65">
+            {accessError}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-screen overflow-hidden flex bg-black text-white">

@@ -147,20 +147,20 @@ export default function WorkflowPage(): JSX.Element {
   };
 
   const uploadVideo = async (file: File) => {
-    console.log("[video-upload] start", {
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      backendUrl: getBackendUrl(),
-    });
+    // console.log("[video-upload] start", {
+    //   name: file.name,
+    //   size: file.size,
+    //   type: file.type,
+    //   backendUrl: getBackendUrl(),
+    // });
 
     const res = await fetch(`${getBackendUrl()}/api/video/upload-url`);
     const data = await res.json();
-    console.log("[video-upload] config response", {
-      status: res.status,
-      ok: res.ok,
-      data,
-    });
+    // console.log("[video-upload] config response", {
+    //   status: res.status,
+    //   ok: res.ok,
+    //   data,
+    // });
 
     const uploadUrl = getTransloaditCreateUrl(data.uploadUrl);
     const params = data.params;
@@ -185,11 +185,11 @@ export default function WorkflowPage(): JSX.Element {
       formData.append("signature", signature);
     }
 
-    console.log("[video-upload] transloadit request", {
-      uploadUrl,
-      normalizedFrom: data.uploadUrl,
-      hasSignature: Boolean(signature),
-    });
+    // console.log("[video-upload] transloadit request", {
+    //   uploadUrl,
+    //   normalizedFrom: data.uploadUrl,
+    //   hasSignature: Boolean(signature),
+    // });
 
     const uploadResponse = await fetch(uploadUrl, {
       method: "POST",
@@ -210,10 +210,10 @@ export default function WorkflowPage(): JSX.Element {
 
     const uploadData = await uploadResponse.json();
     const assemblyId = uploadData?.assembly_id;
-    console.log("[video-upload] transloadit upload success", {
-      assemblyId,
-      uploadData,
-    });
+    // console.log("[video-upload] transloadit upload success", {
+    //   assemblyId,
+    //   uploadData,
+    // });
 
     if (!assemblyId) {
       console.error("[video-upload] missing assembly id", { uploadData });
@@ -227,13 +227,13 @@ export default function WorkflowPage(): JSX.Element {
       );
 
       result = await pollRes.json();
-      console.log("[video-upload] poll", {
-        attempt: i + 1,
-        status: pollRes.status,
-        ok: pollRes.ok,
-        assemblyId,
-        result,
-      });
+      // console.log("[video-upload] poll", {
+      //   attempt: i + 1,
+      //   status: pollRes.status,
+      //   ok: pollRes.ok,
+      //   assemblyId,
+      //   result,
+      // });
 
       if (result?.error) {
         console.error("[video-upload] assembly error", result);
@@ -252,11 +252,11 @@ export default function WorkflowPage(): JSX.Element {
     }
 
     const transloaditUrl = getTransloaditUrl(result);
-    console.log("[video-upload] transloadit result url", {
-      assemblyId,
-      transloaditUrl,
-      result,
-    });
+    // console.log("[video-upload] transloadit result url", {
+    //   assemblyId,
+    //   transloaditUrl,
+    //   result,
+    // });
 
     if (!transloaditUrl) {
       console.error("[video-upload] missing transloadit result url", {
@@ -266,10 +266,10 @@ export default function WorkflowPage(): JSX.Element {
       throw new Error("No video URL from Transloadit");
     }
 
-    console.log("[video-upload] copying to supabase", {
-      assemblyId,
-      transloaditUrl,
-    });
+    // console.log("[video-upload] copying to supabase", {
+    //   assemblyId,
+    //   transloaditUrl,
+    // });
     const supabaseRes = await fetch(`${getBackendUrl()}/upload-image`, {
       method: "POST",
       headers: {
@@ -289,10 +289,10 @@ export default function WorkflowPage(): JSX.Element {
     }
 
     const supabaseData = await supabaseRes.json();
-    console.log("[video-upload] complete", {
-      assemblyId,
-      supabaseData,
-    });
+    // console.log("[video-upload] complete", {
+    //   assemblyId,
+    //   supabaseData,
+    // });
 
     if (!supabaseData.url) {
       console.error("[video-upload] missing final video url", { supabaseData });
@@ -303,9 +303,7 @@ export default function WorkflowPage(): JSX.Element {
   };
 
   const uploadImage = async (file: File) => {
-    const res = await fetch(
-      `${getBackendUrl()}/api/image/upload-url`,
-    );
+    const res = await fetch(`${getBackendUrl()}/api/image/upload-url`);
 
     const data = await res.json();
 
@@ -361,16 +359,13 @@ export default function WorkflowPage(): JSX.Element {
       throw new Error("No file URL from Transloadit");
     }
 
-    const supabaseRes = await fetch(
-      `${getBackendUrl()}/upload-image`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ fileUrl: transloaditUrl }),
+    const supabaseRes = await fetch(`${getBackendUrl()}/upload-image`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify({ fileUrl: transloaditUrl }),
+    });
 
     const supabaseData = await supabaseRes.json();
 
@@ -426,9 +421,7 @@ export default function WorkflowPage(): JSX.Element {
                 candidate.data?.autoOutputFor === node.id),
           ),
       )
-      .filter(
-        (node) => !currentEdges.some((edge) => edge.source === node.id),
-      )
+      .filter((node) => !currentEdges.some((edge) => edge.source === node.id))
       .forEach((node) => {
         const outputId = `output-${node.id}`;
         const edgeKey = `${node.id}->${outputId}`;
@@ -694,8 +687,8 @@ export default function WorkflowPage(): JSX.Element {
     (params: Connection) => {
       if (params.source === params.target) return;
 
-const sourceNode = nodes.find((n) => n.id === params.source) as any;
-    const targetNode = nodes.find((n) => n.id === params.target) as any;
+      const sourceNode = nodes.find((n) => n.id === params.source) as any;
+      const targetNode = nodes.find((n) => n.id === params.target) as any;
 
       const sourceLabel = sourceNode?.data?.label ?? params.source;
       const targetLabel = targetNode?.data?.label ?? params.target;
@@ -1010,7 +1003,8 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
         !(n.type === "imageNode" && n.data?.image?.startsWith?.("blob:")),
     );
     if (uploadingNode) {
-      const message = "Please wait for upload to finish before running the workflow.";
+      const message =
+        "Please wait for upload to finish before running the workflow.";
       setNodeOutput(uploadingNode.id, `Error: ${message}`, true);
       return;
     }
@@ -1026,7 +1020,8 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
     try {
       if (selectedNode) {
         const selectedGraphNode =
-          graph.nodes.find((node) => node.id === selectedNode.id) || selectedNode;
+          graph.nodes.find((node) => node.id === selectedNode.id) ||
+          selectedNode;
         await runNode(selectedGraphNode, "", graph.nodes, graph.edges);
         const selectedOutput =
           runOutputsRef.current[selectedGraphNode.id] ||
@@ -1040,7 +1035,12 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
           const nextNode = graph.nodes.find((node) => node.id === edge.target);
 
           if (nextNode) {
-            await runNode(getFreshNode(nextNode), selectedOutput, graph.nodes, graph.edges);
+            await runNode(
+              getFreshNode(nextNode),
+              selectedOutput,
+              graph.nodes,
+              graph.edges,
+            );
           }
         }
         return;
@@ -1094,7 +1094,8 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
         nodeOutput =
           (await uploadBlobImageForNode(node)) || incomingOutput || "";
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Image upload failed";
+        const message =
+          err instanceof Error ? err.message : "Image upload failed";
         showUiError(message);
         setNodes((nds) =>
           nds.map((n) =>
@@ -1134,7 +1135,8 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
       const imageUrl =
         (incomingOutput?.startsWith("blob:") ? "" : incomingOutput) ||
         inputs.find((i: any) => i?.uploadedImage)?.uploadedImage ||
-        inputs.find((i: any) => i?.image && !i.image.startsWith("blob:"))?.image ||
+        inputs.find((i: any) => i?.image && !i.image.startsWith("blob:"))
+          ?.image ||
         "";
 
       if (!imageUrl) {
@@ -1144,23 +1146,20 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
       }
 
       try {
-        const res = await fetch(
-          `${getBackendUrl()}/api/crop-image`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            signal: abortControllerRef.current?.signal,
-            body: JSON.stringify({
-              imageUrl,
-              xPercent: node.data.x || 0,
-              yPercent: node.data.y || 0,
-              widthPercent: node.data.width || 100,
-              heightPercent: node.data.height || 100,
-            }),
+        const res = await fetch(`${getBackendUrl()}/api/crop-image`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        );
+          signal: abortControllerRef.current?.signal,
+          body: JSON.stringify({
+            imageUrl,
+            xPercent: node.data.x || 0,
+            yPercent: node.data.y || 0,
+            widthPercent: node.data.width || 100,
+            heightPercent: node.data.height || 100,
+          }),
+        });
 
         if (!res.ok) {
           const errorText = await res.text();
@@ -1202,31 +1201,30 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
       const videoUrl =
         (incomingOutput?.startsWith("blob:") ? "" : incomingOutput) ||
         inputs.find((i: any) => i?.uploadedVideo)?.uploadedVideo ||
-        inputs.find((i: any) => i?.video && !i.video.startsWith("blob:"))?.video ||
+        inputs.find((i: any) => i?.video && !i.video.startsWith("blob:"))
+          ?.video ||
         "";
 
       if (!videoUrl) {
-        nodeOutput = "Error: Extract Frame node requires an uploaded video URL.";
+        nodeOutput =
+          "Error: Extract Frame node requires an uploaded video URL.";
         setNodeOutput(node.id, nodeOutput, true);
         return;
       }
 
       try {
-        const res = await fetch(
-          `${getBackendUrl()}/api/extract-frame`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            signal: abortControllerRef.current?.signal,
-            body: JSON.stringify({
-              videoUrl,
-              timestamp: node.data.time || 0,
-              format: node.data.format || "jpg",
-            }),
+        const res = await fetch(`${getBackendUrl()}/api/extract-frame`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        );
+          signal: abortControllerRef.current?.signal,
+          body: JSON.stringify({
+            videoUrl,
+            timestamp: node.data.time || 0,
+            format: node.data.format || "jpg",
+          }),
+        });
 
         if (!res.ok) {
           const errorText = await res.text();
@@ -1276,16 +1274,18 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
         inputs.find((i: any) => i?.image)?.image ||
         inputs.find((i: any) => i?.prompt)?.prompt ||
         "";
-      const uploadedImage = inputs.find((i: any) => i?.uploadedImage)
-        ?.uploadedImage;
+      const uploadedImage = inputs.find(
+        (i: any) => i?.uploadedImage,
+      )?.uploadedImage;
       const nonBlobImage = inputs.find(
         (i: any) => i?.image && !i.image.startsWith("blob:"),
       )?.image;
       const hasImageInput = inputs.some(
         (i: any) => i?.uploadedImage || i?.image,
       );
-      const uploadedVideo = inputs.find((i: any) => i?.uploadedVideo)
-        ?.uploadedVideo;
+      const uploadedVideo = inputs.find(
+        (i: any) => i?.uploadedVideo,
+      )?.uploadedVideo;
       const nonBlobVideo = inputs.find(
         (i: any) => i?.video && !i.video.startsWith("blob:"),
       )?.video;
@@ -1294,21 +1294,21 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
       );
       let imageDataUrl = "";
       let imageSource =
-        (incomingOutput && isImageValue(incomingOutput) ? incomingOutput : "") ||
+        (incomingOutput && isImageValue(incomingOutput)
+          ? incomingOutput
+          : "") ||
         uploadedImage ||
         nonBlobImage ||
-        (hasImageInput &&
-        incomingOutput &&
-        !incomingOutput.startsWith("blob:")
+        (hasImageInput && incomingOutput && !incomingOutput.startsWith("blob:")
           ? incomingOutput
           : "");
       const videoSource =
-        (incomingOutput && isVideoValue(incomingOutput) ? incomingOutput : "") ||
+        (incomingOutput && isVideoValue(incomingOutput)
+          ? incomingOutput
+          : "") ||
         uploadedVideo ||
         nonBlobVideo ||
-        (hasVideoInput &&
-        incomingOutput &&
-        !incomingOutput.startsWith("blob:")
+        (hasVideoInput && incomingOutput && !incomingOutput.startsWith("blob:")
           ? incomingOutput
           : "");
 
@@ -1328,7 +1328,10 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
             setNodes((nds) =>
               nds.map((n) =>
                 n.id === node.id
-                  ? { ...n, data: { ...n.data, output: nodeOutput, error: true } }
+                  ? {
+                      ...n,
+                      data: { ...n.data, output: nodeOutput, error: true },
+                    }
                   : n,
               ),
             );
@@ -1402,21 +1405,18 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
           ),
         );
 
-        const res = await fetch(
-          `${getBackendUrl()}/api/run-image`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            signal: abortControllerRef.current?.signal,
-            body: JSON.stringify({
-              prompt: requestPrompt,
-              imageUrl: imageSource || undefined,
-              imageDataUrl: imageDataUrl || undefined,
-            }),
+        const res = await fetch(`${getBackendUrl()}/api/run-image`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        );
+          signal: abortControllerRef.current?.signal,
+          body: JSON.stringify({
+            prompt: requestPrompt,
+            imageUrl: imageSource || undefined,
+            imageDataUrl: imageDataUrl || undefined,
+          }),
+        });
 
         if (!res.ok) {
           const errorText = await res.text();
@@ -1474,7 +1474,9 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
       const textInputs = inputs
         .flatMap((i: any) => [i?.output, i?.prompt])
         .filter((value: any): value is string => Boolean(value))
-        .filter((value: string) => !isImageValue(value) && !isVideoValue(value));
+        .filter(
+          (value: string) => !isImageValue(value) && !isVideoValue(value),
+        );
       const inputSource =
         (incomingOutput &&
         !isImageValue(incomingOutput) &&
@@ -1484,7 +1486,9 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
         textInputs.join("\n") ||
         "";
       const imageUrl =
-        (incomingOutput && isImageValue(incomingOutput) ? incomingOutput : "") ||
+        (incomingOutput && isImageValue(incomingOutput)
+          ? incomingOutput
+          : "") ||
         inputs.find((i: any) => i?.uploadedImage)?.uploadedImage ||
         inputs.find((i: any) => i?.image && isImageValue(i.image))?.image ||
         inputs.find((i: any) => i?.output && isImageValue(i.output))?.output ||
@@ -1511,20 +1515,17 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
           ),
         );
 
-        const res = await fetch(
-          `${getBackendUrl()}/api/run-video`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            signal: abortControllerRef.current?.signal,
-            body: JSON.stringify({
-              prompt: requestPrompt,
-              imageUrl: imageUrl || undefined,
-            }),
+        const res = await fetch(`${getBackendUrl()}/api/run-video`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        );
+          signal: abortControllerRef.current?.signal,
+          body: JSON.stringify({
+            prompt: requestPrompt,
+            imageUrl: imageUrl || undefined,
+          }),
+        });
 
         if (!res.ok) {
           const errorText = await res.text();
@@ -1589,21 +1590,24 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
         .filter((value: any): value is string => Boolean(value))
         .filter((value: string) => !isMediaInput(value));
       const inputSource =
-        (incomingOutput && !isMediaInput(incomingOutput) ? incomingOutput : "") ||
+        (incomingOutput && !isMediaInput(incomingOutput)
+          ? incomingOutput
+          : "") ||
         textInputs.join("\n") ||
         "";
 
-
-      const uploadedImage = inputs.find((i: any) => i?.uploadedImage)
-        ?.uploadedImage;
+      const uploadedImage = inputs.find(
+        (i: any) => i?.uploadedImage,
+      )?.uploadedImage;
       const nonBlobImage = inputs.find(
         (i: any) => i?.image && !i.image.startsWith("blob:"),
       )?.image;
       const hasImageInput = inputs.some(
         (i: any) => i?.uploadedImage || i?.image,
       );
-      const uploadedVideo = inputs.find((i: any) => i?.uploadedVideo)
-        ?.uploadedVideo;
+      const uploadedVideo = inputs.find(
+        (i: any) => i?.uploadedVideo,
+      )?.uploadedVideo;
       const nonBlobVideo = inputs.find(
         (i: any) => i?.video && !i.video.startsWith("blob:"),
       )?.video;
@@ -1612,21 +1616,21 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
       );
       let imageDataUrl = "";
       let imageSource =
-        (incomingOutput && isImageValue(incomingOutput) ? incomingOutput : "") ||
+        (incomingOutput && isImageValue(incomingOutput)
+          ? incomingOutput
+          : "") ||
         uploadedImage ||
         nonBlobImage ||
-        (hasImageInput &&
-        incomingOutput &&
-        !incomingOutput.startsWith("blob:")
+        (hasImageInput && incomingOutput && !incomingOutput.startsWith("blob:")
           ? incomingOutput
           : "");
       const videoSource =
-        (incomingOutput && isVideoValue(incomingOutput) ? incomingOutput : "") ||
+        (incomingOutput && isVideoValue(incomingOutput)
+          ? incomingOutput
+          : "") ||
         uploadedVideo ||
         nonBlobVideo ||
-        (hasVideoInput &&
-        incomingOutput &&
-        !incomingOutput.startsWith("blob:")
+        (hasVideoInput && incomingOutput && !incomingOutput.startsWith("blob:")
           ? incomingOutput
           : "");
 
@@ -1689,45 +1693,46 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
         return;
       }
 
-      const requestPrompt = [
-        "Use the connected workflow inputs to complete the user's request directly.",
-        "If an image or video is attached, it is the source of truth. Do not describe unrelated scenes or prior outputs.",
-        "Do not ask follow-up questions. If details are missing, infer reasonable choices from the provided text and media.",
-        inputSource ? `User request from connected text node:\n${inputSource}` : "",
-        promptText ? `LLM node instruction:\n${promptText}` : "",
-        imageSource || imageDataUrl
-          ? "Use the attached image as visual context for the response."
-          : "",
-        videoSource ? "Use the attached video as visual context for the response." : "",
-      ]
-        .filter(Boolean)
-        .join("\n\n") || "Describe the content.";
-
+      const requestPrompt =
+        [
+          "Use the connected workflow inputs to complete the user's request directly.",
+          "If an image or video is attached, it is the source of truth. Do not describe unrelated scenes or prior outputs.",
+          "Do not ask follow-up questions. If details are missing, infer reasonable choices from the provided text and media.",
+          inputSource
+            ? `User request from connected text node:\n${inputSource}`
+            : "",
+          promptText ? `LLM node instruction:\n${promptText}` : "",
+          imageSource || imageDataUrl
+            ? "Use the attached image as visual context for the response."
+            : "",
+          videoSource
+            ? "Use the attached video as visual context for the response."
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n\n") || "Describe the content.";
 
       try {
         if (videoSource) {
           setNodeOutput(node.id, "Analyzing video...", false);
         }
 
-        const res = await fetch(
-          `${getBackendUrl()}/api/run-llm`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            signal: abortControllerRef.current?.signal,
-            body: JSON.stringify({
-              prompt:
-                requestPrompt ||
-                (videoSource ? "Describe the video." : "Describe the image."),
-              model: node.data.model || "gemini-2.5-flash",
-              imageUrl: imageSource || undefined,
-              imageDataUrl: imageDataUrl || undefined,
-              videoUrl: videoSource || undefined,
-            }),
+        const res = await fetch(`${getBackendUrl()}/api/run-llm`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
           },
-        );
+          signal: abortControllerRef.current?.signal,
+          body: JSON.stringify({
+            prompt:
+              requestPrompt ||
+              (videoSource ? "Describe the video." : "Describe the image."),
+            model: node.data.model || "gemini-2.5-flash",
+            imageUrl: imageSource || undefined,
+            imageDataUrl: imageDataUrl || undefined,
+            videoUrl: videoSource || undefined,
+          }),
+        });
 
         if (!res.ok) {
           const errorText = await res.text();
@@ -1737,7 +1742,7 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
         }
 
         const { output } = await res.json();
-        
+
         const resultText = output || requestPrompt;
 
         nodeOutput = resultText;
@@ -1795,13 +1800,21 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
     const outgoing = graphEdges.filter((e) => e.source === node.id);
 
     for (const edge of outgoing) {
-      if (stopWorkflowRef.current || abortControllerRef.current?.signal.aborted) {
+      if (
+        stopWorkflowRef.current ||
+        abortControllerRef.current?.signal.aborted
+      ) {
         break;
       }
 
       const nextNode = graphNodes.find((n) => n.id === edge.target);
       if (nextNode) {
-        await runNode(getFreshNode(nextNode), nodeOutput, graphNodes, graphEdges);
+        await runNode(
+          getFreshNode(nextNode),
+          nodeOutput,
+          graphNodes,
+          graphEdges,
+        );
       }
     }
 
@@ -1897,21 +1910,18 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
   const saveWorkflow = async () => {
     const workflowId = window.location.pathname.split("/").pop();
 
-    await fetch(
-      `${getBackendUrl()}/api/workflow/${workflowId}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name,
-          nodes: getPersistableNodes(),
-          edges,
-          history,
-        }),
+    await fetch(`${getBackendUrl()}/api/workflow/${workflowId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify({
+        name,
+        nodes: getPersistableNodes(),
+        edges,
+        history,
+      }),
+    });
   };
 
   const exportWorkflowJson = () => {
@@ -1948,9 +1958,7 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
   const loadWorkflow = async () => {
     const id = window.location.pathname.split("/").pop();
 
-    const res = await fetch(
-      `${getBackendUrl()}/api/workflow/single/${id}`,
-    );
+    const res = await fetch(`${getBackendUrl()}/api/workflow/single/${id}`);
 
     const data = await res.json();
 
@@ -2177,9 +2185,7 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
           </button>
         </div>
       )}
-      <span className="hidden">
-        ☰
-      </span>
+      <span className="hidden">☰</span>
 
       <div
         className={`
@@ -2366,15 +2372,7 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
           }}
           connectionLineType={ConnectionLineType.Bezier}
         >
-          <div className="absolute right-3 top-14 z-50 flex items-center gap-2 md:right-4 md:top-4">
-            <button
-              onClick={exportWorkflowJson}
-              aria-label="Export workflow JSON"
-              title="Export workflow JSON"
-              className="rounded-md border border-white/10 bg-[#111] p-2 text-white/70 shadow hover:bg-[#1a1a1a] hover:text-white"
-            >
-              <Download className="size-4" />
-            </button>
+          <div className="absolute right-3 top-14 z-50 flex md:flex-row flex-col items-end gap-2 md:right-4 md:top-4">
             <button
               onClick={runWorkflow}
               className={`px-3 py-1.5 rounded-md text-xs text-white/80 shadow border border-white/10 ${
@@ -2385,12 +2383,20 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
             >
               {isWorkflowRunning ? "Stop Workflow" : "Run Workflow"}
             </button>
+            <button
+              onClick={exportWorkflowJson}
+              aria-label="Export workflow JSON"
+              title="Export workflow JSON"
+              className="rounded-md border border-white/10 bg-[#111] p-2 text-white/70 shadow hover:bg-[#1a1a1a] hover:text-white"
+            >
+              <Download className="size-4" />
+            </button>
           </div>
           <div className="absolute left-3 top-14 z-50 md:left-0 md:top-0">
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-[min(260px,calc(100vw-6rem))] rounded-md border border-white/10 bg-black/60 px-4 py-2 text-sm text-white outline-none backdrop-blur-md md:ml-5 md:mt-8"
+              className="md:w-[min(260px,calc(100vw-6rem))] w-200px rounded-md border border-white/10 bg-black/60 px-4 py-2 text-sm text-white outline-none backdrop-blur-md md:ml-5 md:mt-8"
             />
           </div>
           <Background gap={20} size={2} />
@@ -2449,7 +2455,10 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
                   <AlertTriangle className="size-5" />
                 </div>
                 <div>
-                  <h2 id="quota-dialog-title" className="text-base font-semibold">
+                  <h2
+                    id="quota-dialog-title"
+                    className="text-base font-semibold"
+                  >
                     Quota exceeded
                   </h2>
                   <p className="text-xs text-white/45">Workflow stopped</p>
@@ -2464,7 +2473,9 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
                 <X className="size-4" />
               </button>
             </div>
-            <p className="text-sm leading-relaxed text-white/70">{quotaDialog}</p>
+            <p className="text-sm leading-relaxed text-white/70">
+              {quotaDialog}
+            </p>
             <div className="mt-5 flex justify-end">
               <button
                 type="button"
@@ -2507,7 +2518,9 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
             <div className="flex shrink-0 items-center justify-between border-b border-white/10 p-4">
               <div>
                 <div className="text-sm font-semibold">History</div>
-                <p className="text-xs text-white/40">{allHistory.length} events</p>
+                <p className="text-xs text-white/40">
+                  {allHistory.length} events
+                </p>
               </div>
               <div className="flex items-center gap-1">
                 <button
@@ -2574,4 +2587,3 @@ const sourceNode = nodes.find((n) => n.id === params.source) as any;
     </div>
   );
 }
-

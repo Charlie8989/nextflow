@@ -24,6 +24,9 @@ const sampleWorkflow2Frame =
 const sampleWorkflow2Output =
   "Unveiling something special! Get ready to experience the innovation that's got everyone talking. Dive into the details and see the magic for yourself. Shop now! #NewProduct #Innovation #MustHave";
 
+const mergedWorkflowImage =
+  "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1777377418517-dbf24ef6.jpg";
+
 export const exampleWorkflows: ExampleWorkflow[] = [
   {
     id: "sample-workflow-1",
@@ -349,6 +352,298 @@ export const exampleWorkflows: ExampleWorkflow[] = [
         id: "edge-llm-1777245643070-output-llm-1777245643070",
         source: "llm-1777245643070",
         target: "output-llm-1777245643070",
+        type: "pulse",
+      },
+    ],
+  }
+  ,
+  {
+    id: "merged-workflow-fast",
+    name: "Merged Workflow Fast",
+    description: "Combined product image, crop, video frame, and fast marketing post workflow.",
+    image: mergedWorkflowImage,
+    nodes: [
+      {
+        id: "image-1777238379072",
+        type: "imageNode",
+        position: {
+          x: 196.71005725832782,
+          y: 299.50854053265766,
+        },
+        data: {
+          error: false,
+          image:
+            "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-image-1777238418198.jpeg",
+          label: "image",
+          prompt: "",
+          running: false,
+          uploading: false,
+          uploadedImage:
+            "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-image-1777238418198.jpeg",
+        },
+        width: 300,
+        height: 302,
+      },
+      {
+        id: "crop-1777238395617",
+        type: "cropNode",
+        position: {
+          x: 717.6130944816886,
+          y: 486.29101362116506,
+        },
+        data: {
+          x: "50",
+          y: "50",
+          error: false,
+          image:
+            "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1777377156442-2d5d3f24.png",
+          label: "crop",
+          width: "80",
+          height: "80",
+          output:
+            "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1777377156442-2d5d3f24.png",
+          prompt: "",
+          running: false,
+          uploadedImage:
+            "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1777377156442-2d5d3f24.png",
+        },
+        width: 200,
+        height: 523,
+      },
+      {
+        id: "text-1777238420417",
+        type: "textNode",
+        position: {
+          x: 1090.986952504254,
+          y: 146.6842983064264,
+        },
+        data: {
+          label: "text",
+          prompt:
+            "You are a professional marketing copywriter. Generate a compelling one-paragraph product description",
+          running: false,
+        },
+        width: 180,
+        height: 210,
+      },
+      {
+        id: "text-1777238447952",
+        type: "textNode",
+        position: {
+          x: 1156.3772040690587,
+          y: 828.2370982123527,
+        },
+        data: {
+          label: "text",
+          prompt:
+            "Product: Classic Leather Crossbody Bag\n\nFeatures: Premium leather finish, adjustable shoulder strap, secure flap closure, compact yet spacious design for daily essentials.",
+          running: false,
+        },
+        width: 180,
+        height: 210,
+      },
+      {
+        id: "llm-1777238632520",
+        type: "llmNode",
+        position: {
+          x: 1588.0249987719092,
+          y: 357.27679240878246,
+        },
+        data: {
+          error: false,
+          label: "llm",
+          model: "gemini-2.5-flash",
+          output:
+            "Elevate your everyday style with our Classic Leather Crossbody Bag, a timeless accessory crafted from premium, finely textured leather in a rich caramel hue. Designed for both elegance and practicality, it features a comfortable, adjustable shoulder strap that allows for versatile wear, while the distinctive saddle-shaped flap, adorned with elegant white contrast stitching and a secure gold-tone magnetic closure, keeps your belongings safe. This bag strikes the perfect balance, offering a compact silhouette that discreetly holds all your daily essentials without compromising on sophisticated design.",
+          prompt: "take the required description from text nodes",
+          running: false,
+        },
+        width: 180,
+        height: 214,
+      },
+      {
+        id: "video-1777376162277",
+        type: "videoNode",
+        position: {
+          x: 743.1049502981002,
+          y: 1331.3602213136814,
+        },
+        data: {
+          error: false,
+          label: "video",
+          video:
+            "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/media-1777376276820-0.4515760288536247.mp4",
+          output:
+            "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/media-1777376276820-0.4515760288536247.mp4",
+          prompt: "",
+          running: false,
+          uploading: false,
+          errorMessage: "",
+          uploadedVideo:
+            "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/media-1777376276820-0.4515760288536247.mp4",
+        },
+        width: 180,
+        height: 162,
+      },
+      {
+        id: "text-1777376178660",
+        type: "textNode",
+        position: {
+          x: 1271.803389092006,
+          y: 1169.609960093363,
+        },
+        data: {
+          label: "text",
+          prompt:
+            "You are a social media manager. Create a tweet-length marketing post based on the product image and video frame",
+          running: false,
+        },
+        width: 180,
+        height: 210,
+      },
+      {
+        id: "frame-1777376539092",
+        type: "extractFrame",
+        position: {
+          x: 1549.562637276954,
+          y: 1661.9626026303722,
+        },
+        data: {
+          time: "05",
+          error: false,
+          image: mergedWorkflowImage,
+          label: "frame",
+          model: "",
+          format: "jpg",
+          output: mergedWorkflowImage,
+          prompt: "",
+          running: false,
+          provider: "",
+          uploadedImage: mergedWorkflowImage,
+        },
+        width: 200,
+        height: 408,
+      },
+      {
+        id: "output-llm-1777238632520",
+        type: "outputNode",
+        position: {
+          x: 1908.0249987719092,
+          y: 357.27679240878246,
+        },
+        data: {
+          label: "output",
+          autoOutputFor: "llm-1777238632520",
+          running: false,
+          output:
+            "Elevate your everyday style with our Classic Leather Crossbody Bag, a timeless accessory crafted from premium, finely textured leather in a rich caramel hue. Designed for both elegance and practicality, it features a comfortable, adjustable shoulder strap that allows for versatile wear, while the distinctive saddle-shaped flap, adorned with elegant white contrast stitching and a secure gold-tone magnetic closure, keeps your belongings safe. This bag strikes the perfect balance, offering a compact silhouette that discreetly holds all your daily essentials without compromising on sophisticated design.",
+        },
+        width: 280,
+        height: 451,
+      },
+      {
+        id: "llm-1777377312788",
+        type: "llmNode",
+        position: {
+          x: 2502.1097318449492,
+          y: 1119.8030401919943,
+        },
+        data: {
+          label: "llm",
+          prompt: "do as the text says",
+          model: "gemini-2.5-flash",
+          running: false,
+          output:
+            "Elevate your everyday style with our Classic Leather Crossbody Bag! Crafted from premium caramel-hued leather, its timeless design, saddle-shaped flap, and gold-tone closure offer elegant practicality. Compact yet spacious for your essentials. #LeatherBag #Crossbody #TimelessStyle",
+          error: false,
+        },
+        width: 180,
+        height: 214,
+      },
+      {
+        id: "output-llm-1777377312788",
+        type: "outputNode",
+        position: {
+          x: 2822.1097318449492,
+          y: 1119.8030401919943,
+        },
+        data: {
+          label: "output",
+          autoOutputFor: "llm-1777377312788",
+          running: false,
+          output:
+            "Elevate your everyday style with our Classic Leather Crossbody Bag! Crafted from premium caramel-hued leather, its timeless design, saddle-shaped flap, and gold-tone closure offer elegant practicality. Compact yet spacious for your essentials. #LeatherBag #Crossbody #TimelessStyle",
+        },
+        width: 280,
+        height: 269,
+      },
+    ],
+    edges: [
+      {
+        id: "reactflow__edge-image-1777238379072-crop-1777238395617",
+        source: "image-1777238379072",
+        target: "crop-1777238395617",
+      },
+      {
+        id: "reactflow__edge-text-1777238420417-llm-1777238632520",
+        source: "text-1777238420417",
+        target: "llm-1777238632520",
+      },
+      {
+        id: "reactflow__edge-text-1777238447952-llm-1777238632520",
+        source: "text-1777238447952",
+        target: "llm-1777238632520",
+      },
+      {
+        id: "reactflow__edge-video-1777376162277-frame-1777376539092",
+        source: "video-1777376162277",
+        target: "frame-1777376539092",
+      },
+      {
+        id: "reactflow__edge-crop-1777238395617-llm-1777238632520",
+        source: "crop-1777238395617",
+        target: "llm-1777238632520",
+      },
+      {
+        id: "edge-llm-1777238632520-output-llm-1777238632520",
+        source: "llm-1777238632520",
+        target: "output-llm-1777238632520",
+        type: "pulse",
+      },
+      {
+        id: "reactflow__edge-text-1777376178660-llm-1777377312788",
+        type: "beizer",
+        style: {
+          stroke: "#60a5fa",
+          strokeWidth: 3,
+        },
+        source: "text-1777376178660",
+        target: "llm-1777377312788",
+      },
+      {
+        id: "reactflow__edge-frame-1777376539092-llm-1777377312788",
+        type: "beizer",
+        style: {
+          stroke: "#60a5fa",
+          strokeWidth: 3,
+        },
+        source: "frame-1777376539092",
+        target: "llm-1777377312788",
+      },
+      {
+        id: "reactflow__edge-output-llm-1777238632520-llm-1777377312788",
+        type: "beizer",
+        style: {
+          stroke: "#60a5fa",
+          strokeWidth: 3,
+        },
+        source: "output-llm-1777238632520",
+        target: "llm-1777377312788",
+      },
+      {
+        id: "edge-llm-1777377312788-output-llm-1777377312788",
+        source: "llm-1777377312788",
+        target: "output-llm-1777377312788",
         type: "pulse",
       },
     ],

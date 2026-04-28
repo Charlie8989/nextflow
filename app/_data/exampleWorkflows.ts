@@ -358,8 +358,8 @@ export const exampleWorkflows: ExampleWorkflow[] = [
   }
   ,
   {
-    id: "merged-workflow-fast",
-    name: "Merged Workflow Fast",
+    id: "merged-workflow",
+    name: "Merged Workflow",
     description: "Combined product image, crop, video frame, and fast marketing post workflow.",
     image: mergedWorkflowImage,
     nodes: [

@@ -14,6 +14,7 @@ import ReactFlow, {
   Position,
   useEdgesState,
   useNodesState,
+  MiniMap,
 } from "reactflow";
 import "reactflow/dist/style.css";
 

@@ -1,10 +1,13 @@
 import { UploadIcon, Video } from "lucide-react";
 import { JSX, useRef } from "react";
 import { Handle, Position } from "reactflow";
+import InlineNodeOutput from "./InlineNodeOutput";
 
 type Props = {
   data: {
     video?: string;
+    uploadedVideo?: string;
+    output?: string;
     running?: boolean;
     uploading?: boolean;
     error?: boolean;
@@ -16,18 +19,33 @@ type Props = {
 export default function VideoNode({ data }: Props): JSX.Element {
   const fileRef = useRef<HTMLInputElement>(null);
   const openFilePicker = () => fileRef.current?.click();
+  const preview = data.uploadedVideo || data.output || data.video || "";
+  const targetHandleClass =
+    "!left-0 !size-3 !translate-x-0 !border !border-black !bg-yellow-400";
+  const sourceHandleClass =
+    "!right-0 !size-3 !translate-x-0 !border !border-black !bg-purple-400";
 
   return (
-    <div className={`w-45 bg-[#202020] rounded-2xl border text-white overflow-hidden shadow-xl
+    <div className={`w-[min(82vw,300px)] bg-[#111] rounded-lg border text-white overflow-hidden shadow-xl
   ${
     data.running
-      ? "border-green-400 shadow-[0_0_20px_rgba(34,197,94,0.8)] animate-pulse"
-      : "border-cyan-500"
+      ? "border-purple-400 shadow-[0_0_24px_rgba(168,85,247,0.65)] animate-pulse"
+      : data.error
+        ? "border-red-400/70"
+        : "border-white/10"
       }`}>
+      <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-white/45">
+          Upload Video
+        </p>
+        {data.running && (
+          <span className="text-[10px] text-purple-200">Running</span>
+        )}
+      </div>
       <div
-        onClick={!data.video && !data.uploading ? openFilePicker : undefined}
-        className={`relative h-40 flex items-center justify-center border-b border-white/70 ${
-          !data.video && !data.uploading ? "cursor-pointer" : ""
+        onClick={!preview && !data.uploading ? openFilePicker : undefined}
+        className={`relative flex h-44 items-center justify-center bg-black/25 ${
+          !preview && !data.uploading ? "cursor-pointer" : ""
         }`}
       >
         {data.uploading ? (
@@ -38,10 +56,12 @@ export default function VideoNode({ data }: Props): JSX.Element {
           <span className="px-3 text-center text-red-400 text-sm">
             {data.errorMessage || "Upload failed"}
           </span>
-        ) : data.video ? (
+        ) : preview ? (
           <>
             <video
-              src={data.video}
+              src={preview}
+              muted
+              playsInline
               className="w-full h-full object-cover"
             />
             <button
@@ -74,15 +94,19 @@ export default function VideoNode({ data }: Props): JSX.Element {
         }}
       />
 
+      <InlineNodeOutput output={data.output && data.output !== preview ? data.output : ""} />
+
       <Handle
         type="target"
         position={Position.Left}
-        className="bg-yellow-500 w-2 h-2"
+        style={{ transform: "translateY(-50%)" }}
+        className={targetHandleClass}
       />
       <Handle
         type="source"
         position={Position.Right}
-        className="bg-blue-500 w-2 h-2"
+        style={{ transform: "translateY(-50%)" }}
+        className={sourceHandleClass}
       />
     </div>
   );

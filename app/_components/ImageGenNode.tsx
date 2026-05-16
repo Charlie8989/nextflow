@@ -17,10 +17,14 @@ type Props = {
 
 export default function ImageGenNode({ data }: Props): JSX.Element {
   const modelLabel = [data.provider, data.model].filter(Boolean).join(" / ");
+  const targetHandleClass =
+    "!left-0 !size-3 !translate-x-0 !border !border-black !bg-yellow-400";
+  const sourceHandleClass =
+    "!right-0 !size-3 !translate-x-0 !border !border-black !bg-fuchsia-500";
 
   return (
     <div
-      className={`w-[120px] md:w-[200px] bg-[#202020] rounded-2xl border text-white overflow-hidden shadow-xl
+      className={`w-[min(82vw,260px)] md:w-[220px] bg-[#202020] rounded-lg border text-white overflow-hidden shadow-xl
   ${
     data.running
       ? "border-fuchsia-400 shadow-[0_0_20px_rgba(217,70,239,0.8)] animate-pulse"
@@ -40,8 +44,14 @@ export default function ImageGenNode({ data }: Props): JSX.Element {
           <textarea
             value={data.prompt || ""}
             onChange={(e) => data.onChange?.(e.target.value)}
+            onKeyDownCapture={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            onKeyUpCapture={(e) => e.stopPropagation()}
+            onKeyUp={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
             placeholder="Generate or edit image..."
-            className="node-scroll w-full min-h-[90px] bg-[#202020] p-2 rounded border border-white/20 outline-none nodrag"
+            className="node-scroll nopan nowheel w-full min-h-[90px] bg-[#202020] p-2 rounded border border-white/20 outline-none nodrag"
           />
         </div>
         {(data.running || modelLabel) && (
@@ -54,12 +64,14 @@ export default function ImageGenNode({ data }: Props): JSX.Element {
       <Handle
         type="target"
         position={Position.Left}
-        className="bg-yellow-500 w-2 h-2"
+        style={{ transform: "translateY(-50%)" }}
+        className={targetHandleClass}
       />
       <Handle
         type="source"
         position={Position.Right}
-        className="bg-fuchsia-500 w-2 h-2"
+        style={{ transform: "translateY(-50%)" }}
+        className={sourceHandleClass}
       />
     </div>
   );

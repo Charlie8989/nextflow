@@ -1,10 +1,13 @@
 import { UploadIcon } from "lucide-react";
 import { JSX, useRef } from "react";
 import { Handle, Position } from "reactflow";
+import InlineNodeOutput from "./InlineNodeOutput";
 
 type Props = {
   data: {
     image?: string;
+    uploadedImage?: string;
+    output?: string;
     running?: boolean;
     uploading?: boolean;
     error?: boolean;
@@ -15,24 +18,39 @@ type Props = {
 export default function ImageNode({ data }: Props): JSX.Element {
   const fileRef = useRef<HTMLInputElement>(null);
   const openFilePicker = () => fileRef.current?.click();
+  const preview = data.uploadedImage || data.output || data.image || "";
+  const targetHandleClass =
+    "!left-0 !size-3 !translate-x-0 !border !border-black !bg-yellow-400";
+  const sourceHandleClass =
+    "!right-0 !size-3 !translate-x-0 !border !border-black !bg-purple-400";
 
   return (
-    <div className={`min-w-[100px] md:min-w-[180px] bg-[#202020] rounded-2xl border text-white overflow-hidden shadow-xl
+    <div className={`w-[min(82vw,320px)] bg-[#111] rounded-lg border text-white overflow-hidden shadow-xl
   ${
     data.running
-      ? "border-green-400 shadow-[0_0_20px_rgba(34,197,94,0.8)] animate-pulse"
-      : "border-cyan-500"
+      ? "border-purple-400 shadow-[0_0_24px_rgba(168,85,247,0.65)] animate-pulse"
+      : data.error
+        ? "border-red-400/70"
+        : "border-white/10"
       }`}>
+      <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-white/45">
+          Upload Image
+        </p>
+        {data.running && (
+          <span className="text-[10px] text-purple-200">Running</span>
+        )}
+      </div>
       <div
-        onClick={!data.image && !data.uploading ? openFilePicker : undefined}
-        className={`relative w-full border-b border-white/70 overflow-hidden flex items-center justify-center ${
-          !data.image && !data.uploading ? "cursor-pointer" : ""
+        onClick={!preview && !data.uploading ? openFilePicker : undefined}
+        className={`relative flex min-h-40 w-full items-center justify-center overflow-hidden bg-black/25 ${
+          !preview && !data.uploading ? "cursor-pointer" : ""
         }`}
       >
-        {data.image ? (
+        {preview ? (
           <>
             <img
-              src={data.image}
+              src={preview}
               alt="preview"
               className="w-full h-auto max-h-[300px] object-contain"
             />
@@ -74,15 +92,19 @@ export default function ImageNode({ data }: Props): JSX.Element {
         }}
       />
 
+      <InlineNodeOutput output={data.output && data.output !== preview ? data.output : ""} />
+
       <Handle
         type="target"
         position={Position.Left}
-        className="bg-yellow-500 w-2 h-2"
+        style={{ transform: "translateY(-50%)" }}
+        className={targetHandleClass}
       />
       <Handle
         type="source"
         position={Position.Right}
-        className="bg-blue-500 w-2 h-2"
+        style={{ transform: "translateY(-50%)" }}
+        className={sourceHandleClass}
       />
     </div>
   );

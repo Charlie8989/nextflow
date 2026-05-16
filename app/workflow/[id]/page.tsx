@@ -3,7 +3,7 @@
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useState, useCallback, JSX, useEffect, useRef } from "react";
-import { ConnectionLineType } from "reactflow";
+import { ConnectionLineType, MiniMap } from "reactflow";
 import ReactFlow, {
   Background,
   addEdge,
@@ -26,6 +26,7 @@ import VideoGenNode from "../../_components/VideoGenNode";
 import ExtractFrameNode from "../../_components/ExtractFrameNode";
 import {
   AlertTriangle,
+  CheckCircle2,
   Clock10,
   Download,
   Menu,
@@ -33,39 +34,67 @@ import {
   PanelLeftOpen,
   PanelRightClose,
   PanelRightOpen,
+  Redo2Icon,
   Search,
+  Timer,
   Trash2,
+  Undo2Icon,
   X,
+  XCircle,
 } from "lucide-react";
 import PulseEdge from "@/app/_components/PulseEdge";
-import OutputNode from "@/app/_components/OutputNode";
 
-type NodeType =
-  | "text"
-  | "image"
-  | "video"
-  | "imageGen"
-  | "videoGen"
-  | "llm"
-  | "crop"
-  | "frame"
-  | "output";
+type NodeType = "text" | "image" | "video" | "llm" | "crop" | "frame";
+
+type RunStatus = "success" | "failed" | "partial" | "running" | "stopped";
+type RunScope = "full" | "partial" | "single";
+
+type NodeRunHistory = {
+  nodeId: string;
+  nodeLabel: string;
+  nodeType: string;
+  status: RunStatus;
+  inputs: Record<string, string>;
+  output: string;
+  durationMs: number;
+  error?: string;
+};
+
+type WorkflowRunHistory = {
+  id: string;
+  number: number;
+  type: "WORKFLOW_RUN";
+  startedAt: number;
+  endedAt?: number;
+  status: RunStatus;
+  scope: RunScope;
+  scopeLabel: string;
+  durationMs: number;
+  nodeRuns: NodeRunHistory[];
+};
+
+type WorkflowHistoryState = {
+  runs?: WorkflowRunHistory[];
+  events?: any[];
+  [key: string]: any;
+};
 
 const nodesList: { id: NodeType; label: string }[] = [
   { id: "text", label: "Text" },
   { id: "image", label: "Upload Image" },
-  { id: "imageGen", label: "AI Image" },
   { id: "video", label: "Upload Video" },
   { id: "llm", label: "LLM" },
   { id: "crop", label: "Crop Image" },
   { id: "frame", label: "Extract Frame" },
-  { id: "videoGen", label: "AI Video" },
 ];
 
 const UI_STORAGE_KEYS = {
   leftCollapsed: "nextflow.workflow.leftCollapsed",
   rightCollapsed: "nextflow.workflow.rightCollapsed",
 };
+
+const INITIAL_WORKFLOW_VIEWPORT = { x: 0, y: 0, zoom: 0.5 };
+const WORKFLOW_FIT_VIEW_OPTIONS = { padding: 0.28, maxZoom: 0.62 };
 
 const nodeTypes = {
   imageNode: ImageNode,
@@ -76,8 +105,18 @@ const nodeTypes = {
   imageGenNode: ImageGenNode,
   videoGenNode: VideoGenNode,
   extractFrame: ExtractFrameNode,
-  outputNode: OutputNode,
 };
+
+const visualNodeTypes = new Set([
+  "imageNode",
+  "videoNode",
+  "cropNode",
+  "extractFrame",
+  "imageGenNode",
+  "videoGenNode",
+]);
+
+const textNodeTypes = new Set(["textNode", "llmNode"]);
 
 const getBackendUrl = () => {
   const configured = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
@@ -95,9 +134,10 @@ const getWorkflowIdFromPath = () =>
 export default function WorkflowPage(): JSX.Element {
   const router = useRouter();
   const { isLoaded: isUserLoaded, isSignedIn, user } = useUser();
-  const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode[]>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
-  const [history, setHistory] = useState<Record<string, any[]>>({});
+  const [nodes, setNodes, rawOnNodesChange] = useNodesState<any>([]);
+  const [edges, setEdges, rawOnEdgesChange] = useEdgesState<Edge[]>([]);
+  const [history, setHistory] = useState<WorkflowHistoryState>({ runs: [] });
+  const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<FlowNode | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isWorkflowRunning, setIsWorkflowRunning] = useState(false);
@@ -108,7 +148,14 @@ export default function WorkflowPage(): JSX.Element {
   const stopWorkflowRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const runOutputsRef = useRef<Record<string, string>>({});
+  const executedRunNodesRef = useRef<Set<string>>(new Set());
+  const currentRunRef = useRef<WorkflowRunHistory | null>(null);
   const lastUiErrorRef = useRef("");
+  const flowWrapperRef = useRef<HTMLDivElement | null>(null);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+  const viewportRef = useRef(INITIAL_WORKFLOW_VIEWPORT);
+  const undoStackRef = useRef<{ nodes: FlowNode[]; edges: Edge[] }[]>([]);
+  const redoStackRef = useRef<{ nodes: FlowNode[]; edges: Edge[] }[]>([]);
   const [menu, setMenu] = useState<{
     x: number;
     y: number;
@@ -385,90 +432,414 @@ export default function WorkflowPage(): JSX.Element {
     image: "imageNode",
     text: "textNode",
     video: "videoNode",
-    imageGen: "imageGenNode",
-    videoGen: "videoGenNode",
     llm: "llmNode",
     crop: "cropNode",
     frame: "extractFrame",
-    output: "outputNode",
   };
 
-  const createOutputNodeFor = (node: FlowNode): FlowNode => ({
-    id: `output-${node.id}`,
-    type: "outputNode",
-    position: {
-      x: node.position.x + 320,
-      y: node.position.y,
-    },
-    data: {
-      label: "output",
-      autoOutputFor: node.id,
-      running: false,
-      output: "",
-    },
-  });
+  const rememberGraphState = useCallback(() => {
+    undoStackRef.current.push({
+      nodes,
+      edges,
+    });
+    if (undoStackRef.current.length > 60) {
+      undoStackRef.current.shift();
+    }
+    redoStackRef.current = [];
+  }, [edges, nodes]);
 
-  const withAutoOutputNodes = (
-    currentNodes: FlowNode[],
-    currentEdges: Edge[],
+  const undoGraph = useCallback(() => {
+    const previous = undoStackRef.current.pop();
+    if (!previous) return;
+    redoStackRef.current.push({ nodes, edges });
+    setNodes(previous.nodes);
+    setEdges(previous.edges);
+  }, [edges, nodes, setEdges, setNodes]);
+
+  const redoGraph = useCallback(() => {
+    const next = redoStackRef.current.pop();
+    if (!next) return;
+    undoStackRef.current.push({ nodes, edges });
+    setNodes(next.nodes);
+    setEdges(next.edges);
+  }, [edges, nodes, setEdges, setNodes]);
+
+  const onNodesChange = useCallback(
+    (changes: any[]) => {
+      if (
+        changes.some((change) =>
+          ["remove", "add"].includes(String(change.type)),
+        )
+      ) {
+        rememberGraphState();
+      }
+      rawOnNodesChange(changes);
+    },
+    [rawOnNodesChange, rememberGraphState],
+  );
+
+  const onEdgesChange = useCallback(
+    (changes: any[]) => {
+      if (
+        changes.some((change) =>
+          ["remove", "add"].includes(String(change.type)),
+        )
+      ) {
+        rememberGraphState();
+      }
+      rawOnEdgesChange(changes);
+    },
+    [rawOnEdgesChange, rememberGraphState],
+  );
+
+  const getNodeById = (nodeList: FlowNode[], nodeId?: string | null) =>
+    nodeList.find((node) => node.id === nodeId);
+
+  const wouldCreateCycle = (
+    source: string,
+    target: string,
+    graphEdges: Edge[] = edges,
   ) => {
-    const nextNodes = [...currentNodes];
-    const nextEdges = [...currentEdges];
-    const nodeIds = new Set(nextNodes.map((node) => node.id));
-    const existingEdgeKeys = new Set(
-      nextEdges.map((edge) => `${edge.source}->${edge.target}`),
+    const visited = new Set<string>();
+    const stack = [target];
+
+    while (stack.length) {
+      const current = stack.pop();
+      if (!current || visited.has(current)) continue;
+      if (current === source) return true;
+      visited.add(current);
+      graphEdges
+        .filter((edge) => edge.source === current)
+        .forEach((edge) => stack.push(edge.target));
+    }
+
+    return false;
+  };
+
+  const getConnectionError = (
+    sourceNode?: FlowNode,
+    targetNode?: FlowNode,
+    targetHandle?: string | null,
+  ) => {
+    if (!sourceNode || !targetNode) return "Could not read this connection.";
+    if (!targetHandle) return "";
+
+    const sourceType = sourceNode.type || "";
+    const targetType = targetNode.type || "";
+    const sourceIsVisual = visualNodeTypes.has(sourceType);
+    const sourceIsText = textNodeTypes.has(sourceType);
+
+    if (targetType === "llmNode") {
+      if (targetHandle === "images" && !sourceIsVisual) {
+        return "Connect image, video, crop, or frame output to the LLM images handle.";
+      }
+      if (
+        (targetHandle === "system_prompt" || targetHandle === "user_message") &&
+        !sourceIsText
+      ) {
+        return "Connect a Text or LLM output to this LLM text handle.";
+      }
+    }
+
+    if (targetType === "cropNode") {
+      if (targetHandle === "image_url" && !sourceIsVisual) {
+        return "Crop image_url needs an image-producing node.";
+      }
+      if (targetHandle !== "image_url" && !sourceIsText) {
+        return "Crop parameter handles need Text node values.";
+      }
+    }
+
+    if (targetType === "extractFrame") {
+      if (targetHandle === "video_url" && sourceType !== "videoNode" && sourceType !== "videoGenNode") {
+        return "Extract Frame video_url needs a video node.";
+      }
+      if (targetHandle === "timestamp" && !sourceIsText) {
+        return "Extract Frame timestamp needs a Text node value.";
+      }
+    }
+
+    return "";
+  };
+
+  const getConnectedInputsForNode = (
+    nodeId: string,
+    graphEdges: Edge[] = edges,
+  ) =>
+    graphEdges
+      .filter((edge) => edge.target === nodeId && edge.targetHandle)
+      .reduce<Record<string, boolean>>((acc, edge) => {
+        if (edge.targetHandle) acc[edge.targetHandle] = true;
+        return acc;
+      }, {});
+
+  const getNextNodePosition = () => {
+    const nodeWidth = 320;
+    const nodeHeight = 260;
+    const margin = 36;
+    const wrapperBounds = flowWrapperRef.current?.getBoundingClientRect();
+    const viewport = viewportRef.current;
+    const visibleWidth = wrapperBounds?.width || window.innerWidth || 1024;
+    const visibleHeight = wrapperBounds?.height || window.innerHeight || 720;
+    const centerPosition = {
+      x: (visibleWidth * 0.5 - viewport.x) / viewport.zoom - nodeWidth * 0.5,
+      y: (visibleHeight * 0.46 - viewport.y) / viewport.zoom - nodeHeight * 0.5,
+    };
+
+    let position = centerPosition;
+
+    const overlaps = (candidate: { x: number; y: number }) =>
+      nodes.some(
+        (node) =>
+          Math.abs(node.position.x - candidate.x) < nodeWidth - margin &&
+          Math.abs(node.position.y - candidate.y) < nodeHeight - margin,
+      );
+
+    for (let attempts = 0; attempts < 30 && overlaps(position); attempts += 1) {
+      position = {
+        x: centerPosition.x + (attempts % 4) * (nodeWidth + margin),
+        y:
+          centerPosition.y +
+          Math.floor(attempts / 4) * (nodeHeight + margin),
+      };
+    }
+
+    return position;
+  };
+
+  const normalizeHistory = (value: any): WorkflowHistoryState => {
+    if (value?.runs && Array.isArray(value.runs)) {
+      return {
+        ...value,
+        runs: value.runs,
+        events: Array.isArray(value.events) ? value.events : [],
+      };
+    }
+
+    const legacyEvents = Object.values(value || {})
+      .flat()
+      .filter((event: any) => event?.type !== "WORKFLOW_RUN");
+
+    return {
+      events: legacyEvents,
+      runs: [],
+    };
+  };
+
+  const runHistory = normalizeHistory(history).runs || [];
+
+  const addActivityHistory = (event: any) => {
+    setHistory((prev) => {
+      const normalized = normalizeHistory(prev);
+
+      return {
+        ...normalized,
+        events: [
+          {
+            ...event,
+            time: event.time || Date.now(),
+          },
+          ...(normalized.events || []),
+        ].slice(0, 100),
+      };
+    });
+  };
+
+  const getNodeDisplayName = (node: FlowNode) => {
+    const rawLabel =
+      node.data?.label ||
+      node.type?.replace(/Node$/, "") ||
+      node.id.split("-")[0] ||
+      "Node";
+
+    return String(rawLabel)
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  };
+
+  const summarizeHistoryValue = (value: any) => {
+    if (value === undefined || value === null || value === "") return "";
+    if (typeof value !== "string") return JSON.stringify(value).slice(0, 180);
+    if (value.startsWith("data:")) return value.slice(0, 32) + "...";
+    return value.length > 180 ? value.slice(0, 177) + "..." : value;
+  };
+
+  const captureNodeInputs = (node: FlowNode, incomingOutput: string) => {
+    const incoming = getIncomingData(node.id);
+    const inputEntries: Record<string, string> = {};
+
+    if (incomingOutput) {
+      inputEntries.incoming = summarizeHistoryValue(incomingOutput);
+    }
+
+    incoming.forEach((input: any, index) => {
+      const value =
+        input?.output ||
+        input?.uploadedImage ||
+        input?.image ||
+        input?.uploadedVideo ||
+        input?.video ||
+        input?.prompt ||
+        "";
+
+      if (value) {
+        inputEntries[`input_${index + 1}`] = summarizeHistoryValue(value);
+      }
+    });
+
+    ["prompt", "model", "x", "y", "width", "height", "time", "format"].forEach(
+      (key) => {
+        const value = summarizeHistoryValue(node.data?.[key]);
+
+        if (value) {
+          inputEntries[key] = value;
+        }
+      },
     );
 
-    currentNodes
-      .filter((node) => node.type !== "outputNode")
-      .filter(
-        (node) =>
-          !currentNodes.some(
-            (candidate) =>
-              candidate.type === "outputNode" &&
-              (candidate.id === `output-${node.id}` ||
-                candidate.data?.autoOutputFor === node.id),
-          ),
-      )
-      .filter((node) => !currentEdges.some((edge) => edge.source === node.id))
-      .forEach((node) => {
-        const outputId = `output-${node.id}`;
-        const edgeKey = `${node.id}->${outputId}`;
-
-        if (!nodeIds.has(outputId)) {
-          const outputNode = createOutputNodeFor(node);
-          nextNodes.push(outputNode);
-          nodeIds.add(outputId);
-        }
-
-        if (!existingEdgeKeys.has(edgeKey)) {
-          nextEdges.push({
-            id: `edge-${node.id}-${outputId}`,
-            source: node.id,
-            target: outputId,
-            type: "pulse",
-          });
-          existingEdgeKeys.add(edgeKey);
-        }
-      });
-
-    return { nodes: nextNodes, edges: nextEdges };
+    return inputEntries;
   };
 
-  const allHistory = Object.values(history)
-    .flat()
-    .sort((a, b) => b.time - a.time);
+  const formatDuration = (durationMs = 0) => {
+    if (durationMs < 1000) return `${Math.max(durationMs, 0)}ms`;
+    return `${(durationMs / 1000).toFixed(1)}s`;
+  };
 
-  const addNode = (type: NodeType): void => {
+  const formatRunDate = (timestamp: number) =>
+    new Intl.DateTimeFormat(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(new Date(timestamp));
+
+  const getStatusClasses = (status: RunStatus) => {
+    if (status === "success") {
+      return "border-emerald-400/25 bg-emerald-400/10 text-emerald-200";
+    }
+
+    if (status === "failed") {
+      return "border-red-400/25 bg-red-400/10 text-red-200";
+    }
+
+    if (status === "running") {
+      return "border-yellow-400/25 bg-yellow-400/10 text-yellow-200";
+    }
+
+    if (status === "stopped") {
+      return "border-zinc-400/25 bg-zinc-400/10 text-zinc-200";
+    }
+
+    return "border-yellow-400/25 bg-yellow-400/10 text-yellow-200";
+  };
+
+  const getStatusIcon = (status: RunStatus) => {
+    if (status === "success") return <CheckCircle2 className="size-3.5" />;
+    if (status === "failed") return <XCircle className="size-3.5" />;
+    if (status === "stopped") return <XCircle className="size-3.5" />;
+    return <Clock10 className="size-3.5" />;
+  };
+
+  const beginWorkflowRun = (scope: RunScope, scopeLabel: string) => {
+    const previousRuns = normalizeHistory(history).runs || [];
+    const nextNumber =
+      previousRuns.reduce((max, run) => Math.max(max, run.number || 0), 0) + 1;
+    const run: WorkflowRunHistory = {
+      id: `run-${Date.now()}`,
+      number: nextNumber,
+      type: "WORKFLOW_RUN",
+      startedAt: Date.now(),
+      status: "running",
+      scope,
+      scopeLabel,
+      durationMs: 0,
+      nodeRuns: [],
+    };
+
+    currentRunRef.current = run;
+    setExpandedRunId(run.id);
+    setHistory((prev) => {
+      const normalized = normalizeHistory(prev);
+
+      return {
+        ...normalized,
+        runs: [run, ...(normalized.runs || [])].slice(0, 50),
+      };
+    });
+  };
+
+  const commitCurrentRun = () => {
+    const run = currentRunRef.current;
+
+    if (!run) return;
+
+    setHistory((prev) => {
+      const normalized = normalizeHistory(prev);
+
+      return {
+        ...normalized,
+        runs: (normalized.runs || []).map((item) =>
+          item.id === run.id ? { ...run, nodeRuns: [...run.nodeRuns] } : item,
+        ),
+      };
+    });
+  };
+
+  const recordNodeRun = (entry: NodeRunHistory) => {
+    const run = currentRunRef.current;
+
+    if (!run) return;
+
+    const existingIndex = run.nodeRuns.findIndex(
+      (item) => item.nodeId === entry.nodeId,
+    );
+
+    if (existingIndex >= 0) {
+      run.nodeRuns[existingIndex] = entry;
+    } else {
+      run.nodeRuns.push(entry);
+    }
+
+    commitCurrentRun();
+  };
+
+  const finishWorkflowRun = () => {
+    const run = currentRunRef.current;
+
+    if (!run) return;
+
+    const failedCount = run.nodeRuns.filter(
+      (nodeRun) => nodeRun.status === "failed",
+    ).length;
+    const successCount = run.nodeRuns.filter(
+      (nodeRun) => nodeRun.status === "success",
+    ).length;
+
+    run.endedAt = Date.now();
+    run.durationMs = run.endedAt - run.startedAt;
+    run.status = stopWorkflowRef.current
+      ? "stopped"
+      : failedCount === 0
+        ? "success"
+        : successCount > 0
+          ? "partial"
+          : "failed";
+
+    commitCurrentRun();
+    currentRunRef.current = null;
+  };
+
+  const addNode = (
+    type: NodeType,
+    position = getNextNodePosition(),
+  ): void => {
     const id = `${type}-${Date.now()}`;
 
     const newNode: FlowNode = {
       id,
       type: nodeTypeMap[type],
-      position: {
-        x: Math.random() * 400 + 100,
-        y: Math.random() * 400 + 100,
-      },
+      position,
       data: {
         label: type,
         prompt: "",
@@ -515,6 +886,7 @@ export default function WorkflowPage(): JSX.Element {
                           ...n.data,
                           video: url,
                           uploadedVideo: url,
+                          output: url,
                           uploading: false,
                           error: false,
                         },
@@ -582,6 +954,7 @@ export default function WorkflowPage(): JSX.Element {
                           ...n.data,
                           image: url,
                           uploadedImage: url,
+                          output: url,
                           uploading: false,
                         },
                       }
@@ -607,26 +980,10 @@ export default function WorkflowPage(): JSX.Element {
           },
         }),
 
-        ...(type === "imageGen" && {
-          running: false,
-          image: "",
-          output: "",
-          model: "",
-          provider: "",
-          error: false,
-        }),
-
-        ...(type === "videoGen" && {
-          running: false,
-          video: "",
-          output: "",
-          model: "",
-          provider: "",
-          error: false,
-        }),
-
         ...(type === "llm" && {
           model: "gemini-2.5-flash",
+          output: "",
+          error: false,
         }),
 
         ...(type === "crop" && {
@@ -670,26 +1027,16 @@ export default function WorkflowPage(): JSX.Element {
             ),
           );
         },
-
-        ...(type === "output" && {
-          running: false,
-          output: "",
-        }),
       },
     };
 
+    rememberGraphState();
     setNodes((prev) => [...prev, newNode]);
-    setHistory((prev) => ({
-      ...prev,
-      [id]: [
-        ...(prev[id] || []),
-        {
-          type: "ADD_NODE",
-          nodeType: type,
-          time: Date.now(),
-        },
-      ],
-    }));
+    setSelectedNode(newNode);
+    addActivityHistory({
+      type: "ADD_NODE",
+      nodeType: type,
+    });
   };
 
   const onConnect = useCallback(
@@ -698,34 +1045,76 @@ export default function WorkflowPage(): JSX.Element {
 
       const sourceNode = nodes.find((n) => n.id === params.source) as any;
       const targetNode = nodes.find((n) => n.id === params.target) as any;
+      const sourceType = sourceNode?.type || "";
+      const targetType = targetNode?.type || "";
+      const sourceLooksVisual = visualNodeTypes.has(sourceType);
+      const nextParams: Connection = { ...params };
 
       const sourceLabel = sourceNode?.data?.label ?? params.source;
       const targetLabel = targetNode?.data?.label ?? params.target;
 
+      if (targetType === "llmNode") {
+        if (!params.targetHandle && sourceLooksVisual) {
+          nextParams.targetHandle = "images";
+        } else if (!params.targetHandle) {
+          nextParams.targetHandle = "user_message";
+        }
+      }
+
+      if (targetType === "cropNode" && !params.targetHandle) {
+        nextParams.targetHandle = "image_url";
+      }
+
+      if (targetType === "extractFrame" && !params.targetHandle) {
+        nextParams.targetHandle =
+          sourceType === "textNode" ? "timestamp" : "video_url";
+      }
+
+      if (wouldCreateCycle(nextParams.source!, nextParams.target!)) {
+        showUiError("This connection would create a cycle.");
+        return;
+      }
+
+      const connectionError = getConnectionError(
+        sourceNode,
+        targetNode,
+        nextParams.targetHandle,
+      );
+
+      if (connectionError) {
+        showUiError(connectionError);
+        return;
+      }
+
       setEdges((eds) => {
         const exists = eds.some(
-          (e) => e.source === params.source && e.target === params.target,
+          (e) =>
+            e.source === nextParams.source &&
+            e.target === nextParams.target &&
+            e.targetHandle === nextParams.targetHandle,
         );
 
         if (exists) return eds;
 
-        return addEdge(params, eds);
+        rememberGraphState();
+
+        return addEdge(
+          {
+            ...nextParams,
+            type: "pulse",
+            id: `edge-${nextParams.source}-${nextParams.sourceHandle || "out"}-${nextParams.target}-${nextParams.targetHandle || "in"}-${Date.now()}`,
+          },
+          eds,
+        );
       });
 
-      setHistory((prev) => ({
-        ...prev,
-        [params.source!]: [
-          ...(prev[params.source!] || []),
-          {
-            type: "CONNECT",
-            sourceType: sourceLabel,
-            targetType: targetLabel,
-            time: Date.now(),
-          },
-        ],
-      }));
+      addActivityHistory({
+        type: "CONNECT",
+        sourceType: sourceLabel,
+        targetType: targetLabel,
+      });
     },
-    [nodes, setEdges],
+    [nodes, setEdges, rememberGraphState],
   );
 
   const onNodeContextMenu = (event: React.MouseEvent, node: Node) => {
@@ -744,20 +1133,36 @@ export default function WorkflowPage(): JSX.Element {
     const deleted = nodes.find((n) => n.id === menu.nodeId) as any;
     if (!deleted) return;
 
+    rememberGraphState();
     setNodes((nds) => nds.filter((n) => n.id !== menu.nodeId));
     setEdges((eds) =>
       eds.filter((e) => e.source !== menu.nodeId && e.target !== menu.nodeId),
     );
 
-    setHistory((prev) => ({
-      ...prev,
-      [deleted.id]: [
-        ...(prev[deleted.id] || []),
-        { type: "DELETE_NODE", nodeType: deleted.data.label, time: Date.now() },
-      ],
-    }));
+    addActivityHistory({
+      type: "DELETE_NODE",
+      nodeType: deleted.data.label,
+    });
 
     setMenu(null);
+  };
+
+  const deleteSelectedNodes = () => {
+    const selectedIds = nodes
+      .filter((node) => node.selected)
+      .map((node) => node.id);
+
+    if (!selectedIds.length) return;
+
+    rememberGraphState();
+    setNodes((nds) => nds.filter((node) => !selectedIds.includes(node.id)));
+    setEdges((eds) =>
+      eds.filter(
+        (edge) =>
+          !selectedIds.includes(edge.source) &&
+          !selectedIds.includes(edge.target),
+      ),
+    );
   };
 
   const getIncomingData = (
@@ -780,15 +1185,13 @@ export default function WorkflowPage(): JSX.Element {
     value.startsWith("data:image/") ||
     /\.(png|jpe?g|webp|gif|avif)(\?|$)/i.test(value) ||
     (/^https?:\/\//i.test(value) &&
-      /(image|generated-image|workflow-image|pollinations|supabase)/i.test(
-        value,
-      ));
+      /(image|generated-image|workflow-image|pollinations)/i.test(value));
 
   const isVideoValue = (value = "") =>
     value.startsWith("data:video/") ||
     /\.(mp4|mov|webm|mpeg|mpg|avi|wmv|3gp)(\?|$)/i.test(value) ||
     (/^https?:\/\//i.test(value) &&
-      /(video|generated-video|workflow-video|supabase)/i.test(value));
+      /(video|generated-video|workflow-video)/i.test(value));
 
   const getFreshNode = (node: FlowNode): FlowNode => {
     const freshOutput = runOutputsRef.current[node.id];
@@ -826,6 +1229,59 @@ export default function WorkflowPage(): JSX.Element {
       })
       .filter(Boolean) as FlowNode[];
   };
+
+  const getNodeOutputValue = (node?: FlowNode | null) => {
+    const data = node?.data || {};
+
+    return (
+      data.output ||
+      data.uploadedImage ||
+      data.image ||
+      data.uploadedVideo ||
+      data.video ||
+      data.prompt ||
+      ""
+    );
+  };
+
+  const getIncomingValueByHandle = (
+    nodeId: string,
+    targetHandle: string,
+    graphNodes: FlowNode[] = nodes,
+    graphEdges: Edge[] = edges,
+  ) => {
+    const edge = graphEdges.find(
+      (item) =>
+        item.target === nodeId && item.targetHandle === targetHandle,
+    );
+    if (!edge) return "";
+
+    const sourceNode = getFreshNode(
+      graphNodes.find((node) => node.id === edge.source) as FlowNode,
+    );
+
+    return getNodeOutputValue(sourceNode);
+  };
+
+  const getIncomingValuesByHandle = (
+    nodeId: string,
+    targetHandle: string,
+    graphNodes: FlowNode[] = nodes,
+    graphEdges: Edge[] = edges,
+  ) =>
+    graphEdges
+      .filter(
+        (edge) =>
+          edge.target === nodeId && edge.targetHandle === targetHandle,
+      )
+      .map((edge) =>
+        getNodeOutputValue(
+          getFreshNode(
+            graphNodes.find((node) => node.id === edge.source) as FlowNode,
+          ),
+        ),
+      )
+      .filter(Boolean);
 
   const blobUrlToDataUrl = async (blobUrl: string) => {
     const blob = await fetch(blobUrl).then((res) => {
@@ -922,6 +1378,7 @@ export default function WorkflowPage(): JSX.Element {
                 ...n.data,
                 image: url,
                 uploadedImage: url,
+                output: url,
                 uploading: false,
                 error: false,
               },
@@ -1000,6 +1457,65 @@ export default function WorkflowPage(): JSX.Element {
     }
   }, [nodes]);
 
+  const runGraphParallel = async (
+    graphNodes: FlowNode[],
+    graphEdges: Edge[],
+  ) => {
+    const completed = new Set<string>();
+    const failed = new Set<string>();
+    const pending = new Set(graphNodes.map((node) => node.id));
+
+    while (pending.size > 0) {
+      if (
+        stopWorkflowRef.current ||
+        abortControllerRef.current?.signal.aborted
+      ) {
+        break;
+      }
+
+      const ready = graphNodes.filter(
+        (node) =>
+          pending.has(node.id) &&
+          graphEdges
+            .filter((edge) => edge.target === node.id)
+            .every(
+              (edge) =>
+                completed.has(edge.source) || failed.has(edge.source),
+            ),
+      );
+
+      if (ready.length === 0) {
+        showUiError("Workflow cannot run because the graph has a cycle.");
+        break;
+      }
+
+      await Promise.all(
+        ready.map(async (node) => {
+          const upstreamFailed = graphEdges
+            .filter((edge) => edge.target === node.id)
+            .some((edge) => failed.has(edge.source));
+
+          if (upstreamFailed) {
+            failed.add(node.id);
+            pending.delete(node.id);
+            return;
+          }
+
+          await runNode(node, "", graphNodes, graphEdges, false);
+          const output = runOutputsRef.current[node.id] || "";
+
+          if (output.startsWith("Error:")) {
+            failed.add(node.id);
+          } else {
+            completed.add(node.id);
+          }
+
+          pending.delete(node.id);
+        }),
+      );
+    }
+  };
+
   const runWorkflow = async () => {
     if (isWorkflowRunning) {
       stopWorkflow();
@@ -1021,48 +1537,54 @@ export default function WorkflowPage(): JSX.Element {
     stopWorkflowRef.current = false;
     abortControllerRef.current = new AbortController();
     runOutputsRef.current = {};
+    executedRunNodesRef.current = new Set();
     setIsWorkflowRunning(true);
-    const graph = withAutoOutputNodes(nodes, edges);
+    const graph = {
+      nodes: nodes.filter((node) => node.type !== "outputNode"),
+      edges: edges.filter(
+        (edge) =>
+          !edge.source.startsWith("output-") &&
+          !edge.target.startsWith("output-"),
+      ),
+    };
     setNodes(graph.nodes);
     setEdges(graph.edges);
 
     try {
+      const selectedGraphNodes = graph.nodes.filter((node) => node.selected);
+
+      if (selectedGraphNodes.length > 1) {
+        const selectedIds = new Set(selectedGraphNodes.map((node) => node.id));
+        const selectedEdges = graph.edges.filter(
+          (edge) => selectedIds.has(edge.source) && selectedIds.has(edge.target),
+        );
+
+        beginWorkflowRun("partial", `${selectedGraphNodes.length} nodes selected`);
+        await runGraphParallel(selectedGraphNodes, selectedEdges);
+        return;
+      }
+
       if (selectedNode) {
         const selectedGraphNode =
           graph.nodes.find((node) => node.id === selectedNode.id) ||
           selectedNode;
-        await runNode(selectedGraphNode, "", graph.nodes, graph.edges);
-        const selectedOutput =
-          runOutputsRef.current[selectedGraphNode.id] ||
-          selectedGraphNode.data?.output ||
-          "";
         const outgoing = graph.edges.filter(
           (edge) => edge.source === selectedGraphNode.id,
         );
-
-        for (const edge of outgoing) {
-          const nextNode = graph.nodes.find((node) => node.id === edge.target);
-
-          if (nextNode) {
-            await runNode(
-              getFreshNode(nextNode),
-              selectedOutput,
-              graph.nodes,
-              graph.edges,
-            );
-          }
-        }
+        beginWorkflowRun(
+          outgoing.length > 0 ? "partial" : "single",
+          outgoing.length > 0
+            ? `${outgoing.length + 1} nodes selected`
+            : "Single Node",
+        );
+        await runNode(selectedGraphNode, "", graph.nodes, graph.edges);
         return;
       }
 
-      const startNodes = graph.nodes.filter(
-        (node) => !graph.edges.some((edge) => edge.target === node.id),
-      );
-      for (const startNode of startNodes) {
-        if (stopWorkflowRef.current) break;
-        await runNode(startNode, "", graph.nodes, graph.edges);
-      }
+      beginWorkflowRun("full", "Full Workflow");
+      await runGraphParallel(graph.nodes, graph.edges);
     } finally {
+      finishWorkflowRun();
       abortControllerRef.current = null;
       stopWorkflowRef.current = false;
       setIsWorkflowRunning(false);
@@ -1077,12 +1599,19 @@ export default function WorkflowPage(): JSX.Element {
     incomingOutput: string,
     graphNodes: FlowNode[] = nodes,
     graphEdges: Edge[] = edges,
+    runDownstream = true,
   ) => {
     node = getFreshNode(node);
 
     if (stopWorkflowRef.current || abortControllerRef.current?.signal.aborted) {
       return;
     }
+
+    if (executedRunNodesRef.current.has(node.id)) {
+      return;
+    }
+
+    executedRunNodesRef.current.add(node.id);
 
     setNodes((nds) =>
       nds.map((n) =>
@@ -1093,18 +1622,70 @@ export default function WorkflowPage(): JSX.Element {
     const inputs: any = getIncomingData(node.id, graphNodes, graphEdges);
     const incomingNodes = getIncomingNodes(node.id, graphNodes, graphEdges);
     let nodeOutput = incomingOutput;
+    const nodeRunStartedAt = Date.now();
+    const nodeRunInputs = captureNodeInputs(node, incomingOutput);
+    const completeNodeRun = (
+      status: RunStatus,
+      output = nodeOutput,
+      error?: string,
+    ) => {
+      recordNodeRun({
+        nodeId: node.id,
+        nodeLabel: getNodeDisplayName(node),
+        nodeType: node.type || "node",
+        status,
+        inputs: nodeRunInputs,
+        output: summarizeHistoryValue(output),
+        durationMs: Date.now() - nodeRunStartedAt,
+        ...(error && { error }),
+      });
+    };
+
+    recordNodeRun({
+      nodeId: node.id,
+      nodeLabel: getNodeDisplayName(node),
+      nodeType: node.type || "node",
+      status: "running",
+      inputs: nodeRunInputs,
+      output: "",
+      durationMs: 0,
+    });
 
     if (node.type === "textNode") {
       nodeOutput = node.data.prompt || incomingOutput || "";
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === node.id
+            ? { ...n, data: { ...n.data, output: nodeOutput, error: false } }
+            : n,
+        ),
+      );
     }
 
     if (node.type === "imageNode") {
       try {
         nodeOutput =
           (await uploadBlobImageForNode(node)) || incomingOutput || "";
+        setNodes((nds) =>
+          nds.map((n) =>
+            n.id === node.id
+              ? {
+                  ...n,
+                  data: {
+                    ...n.data,
+                    image: nodeOutput,
+                    uploadedImage: nodeOutput,
+                    output: nodeOutput,
+                    error: false,
+                  },
+                }
+              : n,
+          ),
+        );
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Image upload failed";
+        nodeOutput = `Error: ${message}`;
         showUiError(message);
         setNodes((nds) =>
           nds.map((n) =>
@@ -1113,6 +1694,7 @@ export default function WorkflowPage(): JSX.Element {
               : n,
           ),
         );
+        completeNodeRun("failed", nodeOutput, message);
         return;
       }
     }
@@ -1127,6 +1709,11 @@ export default function WorkflowPage(): JSX.Element {
         nodeOutput =
           "Error: Video is not uploaded yet. Re-upload the video and wait until upload finishes.";
         setNodeOutput(node.id, nodeOutput, true);
+        completeNodeRun(
+          "failed",
+          nodeOutput,
+          nodeOutput.replace(/^Error:\s*/, ""),
+        );
         return;
       }
 
@@ -1142,15 +1729,29 @@ export default function WorkflowPage(): JSX.Element {
 
     if (node.type === "cropNode") {
       const imageUrl =
+        getIncomingValueByHandle(
+          node.id,
+          "image_url",
+          graphNodes,
+          graphEdges,
+        ) ||
         (incomingOutput?.startsWith("blob:") ? "" : incomingOutput) ||
         inputs.find((i: any) => i?.uploadedImage)?.uploadedImage ||
         inputs.find((i: any) => i?.image && !i.image.startsWith("blob:"))
           ?.image ||
         "";
+      const getCropParam = (handle: string, fallback: string | number) =>
+        getIncomingValueByHandle(node.id, handle, graphNodes, graphEdges) ||
+        fallback;
 
       if (!imageUrl) {
         nodeOutput = "Error: Crop node requires an uploaded image URL.";
         setNodeOutput(node.id, nodeOutput, true);
+        completeNodeRun(
+          "failed",
+          nodeOutput,
+          nodeOutput.replace(/^Error:\s*/, ""),
+        );
         return;
       }
 
@@ -1163,10 +1764,13 @@ export default function WorkflowPage(): JSX.Element {
           signal: abortControllerRef.current?.signal,
           body: JSON.stringify({
             imageUrl,
-            xPercent: node.data.x || 0,
-            yPercent: node.data.y || 0,
-            widthPercent: node.data.width || 100,
-            heightPercent: node.data.height || 100,
+            xPercent: getCropParam("x_percent", node.data.x || 0),
+            yPercent: getCropParam("y_percent", node.data.y || 0),
+            widthPercent: getCropParam("width_percent", node.data.width || 100),
+            heightPercent: getCropParam(
+              "height_percent",
+              node.data.height || 100,
+            ),
           }),
         });
 
@@ -1202,22 +1806,43 @@ export default function WorkflowPage(): JSX.Element {
       } catch (err: any) {
         nodeOutput = `Error: ${err.message}`;
         setNodeOutput(node.id, nodeOutput, true);
+        completeNodeRun("failed", nodeOutput, err.message);
         return;
       }
     }
 
     if (node.type === "extractFrame") {
       const videoUrl =
+        getIncomingValueByHandle(
+          node.id,
+          "video_url",
+          graphNodes,
+          graphEdges,
+        ) ||
         (incomingOutput?.startsWith("blob:") ? "" : incomingOutput) ||
         inputs.find((i: any) => i?.uploadedVideo)?.uploadedVideo ||
         inputs.find((i: any) => i?.video && !i.video.startsWith("blob:"))
           ?.video ||
         "";
+      const timestamp =
+        getIncomingValueByHandle(
+          node.id,
+          "timestamp",
+          graphNodes,
+          graphEdges,
+        ) ||
+        node.data.time ||
+        0;
 
       if (!videoUrl) {
         nodeOutput =
           "Error: Extract Frame node requires an uploaded video URL.";
         setNodeOutput(node.id, nodeOutput, true);
+        completeNodeRun(
+          "failed",
+          nodeOutput,
+          nodeOutput.replace(/^Error:\s*/, ""),
+        );
         return;
       }
 
@@ -1230,7 +1855,7 @@ export default function WorkflowPage(): JSX.Element {
           signal: abortControllerRef.current?.signal,
           body: JSON.stringify({
             videoUrl,
-            timestamp: node.data.time || 0,
+            timestamp,
             format: node.data.format || "jpg",
           }),
         });
@@ -1270,6 +1895,7 @@ export default function WorkflowPage(): JSX.Element {
       } catch (err: any) {
         nodeOutput = `Error: ${err.message}`;
         setNodeOutput(node.id, nodeOutput, true);
+        completeNodeRun("failed", nodeOutput, err.message);
         return;
       }
     }
@@ -1344,6 +1970,11 @@ export default function WorkflowPage(): JSX.Element {
                   : n,
               ),
             );
+            completeNodeRun(
+              "failed",
+              nodeOutput,
+              nodeOutput.replace(/^Error:\s*/, ""),
+            );
             return;
           }
         }
@@ -1388,6 +2019,11 @@ export default function WorkflowPage(): JSX.Element {
           ),
         );
 
+        completeNodeRun(
+          "failed",
+          nodeOutput,
+          nodeOutput.replace(/^Error:\s*/, ""),
+        );
         return;
       }
 
@@ -1464,11 +2100,13 @@ export default function WorkflowPage(): JSX.Element {
           abortControllerRef.current?.signal.aborted ||
           err?.name === "AbortError"
         ) {
+          completeNodeRun("stopped", "Stopped");
           return;
         }
 
         nodeOutput = `Error: ${err.message}`;
         setNodeOutput(node.id, nodeOutput, true);
+        completeNodeRun("failed", nodeOutput, err.message);
       }
     }
 
@@ -1576,17 +2214,17 @@ export default function WorkflowPage(): JSX.Element {
           abortControllerRef.current?.signal.aborted ||
           err?.name === "AbortError"
         ) {
+          completeNodeRun("stopped", "Stopped");
           return;
         }
 
         nodeOutput = `Error: ${err.message}`;
         setNodeOutput(node.id, nodeOutput, true);
+        completeNodeRun("failed", nodeOutput, err.message);
       }
     }
 
     if (node.type === "llmNode") {
-      const promptText = node.data.prompt?.trim() || "";
-
       const isMediaInput = (value = "") =>
         value.startsWith("blob:") ||
         value.startsWith("data:image/") ||
@@ -1598,7 +2236,30 @@ export default function WorkflowPage(): JSX.Element {
         .flatMap((i: any) => [i?.output, i?.prompt])
         .filter((value: any): value is string => Boolean(value))
         .filter((value: string) => !isMediaInput(value));
+      const systemPrompt = getIncomingValuesByHandle(
+        node.id,
+        "system_prompt",
+        graphNodes,
+        graphEdges,
+      )
+        .filter((value) => !isMediaInput(value))
+        .join("\n");
+      const userMessage = getIncomingValuesByHandle(
+        node.id,
+        "user_message",
+        graphNodes,
+        graphEdges,
+      )
+        .filter((value) => !isMediaInput(value))
+        .join("\n");
+      const imageInputs = getIncomingValuesByHandle(
+        node.id,
+        "images",
+        graphNodes,
+        graphEdges,
+      );
       const inputSource =
+        [systemPrompt, userMessage].filter(Boolean).join("\n\n") ||
         (incomingOutput && !isMediaInput(incomingOutput)
           ? incomingOutput
           : "") ||
@@ -1625,6 +2286,7 @@ export default function WorkflowPage(): JSX.Element {
       );
       let imageDataUrl = "";
       let imageSource =
+        imageInputs.find((value) => isImageValue(value)) ||
         (incomingOutput && isImageValue(incomingOutput)
           ? incomingOutput
           : "") ||
@@ -1634,6 +2296,7 @@ export default function WorkflowPage(): JSX.Element {
           ? incomingOutput
           : "");
       const videoSource =
+        imageInputs.find((value) => isVideoValue(value)) ||
         (incomingOutput && isVideoValue(incomingOutput)
           ? incomingOutput
           : "") ||
@@ -1662,6 +2325,11 @@ export default function WorkflowPage(): JSX.Element {
                   ? { ...n, data: { ...n.data, output: nodeOutput } }
                   : n,
               ),
+            );
+            completeNodeRun(
+              "failed",
+              nodeOutput,
+              nodeOutput.replace(/^Error:\s*/, ""),
             );
             return;
           }
@@ -1699,31 +2367,31 @@ export default function WorkflowPage(): JSX.Element {
           ),
         );
 
+        completeNodeRun(
+          "failed",
+          nodeOutput,
+          nodeOutput.replace(/^Error:\s*/, ""),
+        );
         return;
       }
 
       const requestPrompt =
         [
-          "Use the connected workflow inputs to complete the user's request directly.",
-          "If an image or video is attached, it is the source of truth. Do not describe unrelated scenes or prior outputs.",
-          "Do not ask follow-up questions. If details are missing, infer reasonable choices from the provided text and media.",
-          inputSource
-            ? `User request from connected text node:\n${inputSource}`
-            : "",
-          promptText ? `LLM node instruction:\n${promptText}` : "",
-          imageSource || imageDataUrl
-            ? "Use the attached image as visual context for the response."
-            : "",
-          videoSource
-            ? "Use the attached video as visual context for the response."
+          systemPrompt ? `System instruction:\n${systemPrompt}` : "",
+          userMessage ? `User message:\n${userMessage}` : "",
+          inputSource || "Analyze the connected input.",
+          "Use any attached visual input as the source of truth. Do not describe unrelated scenes or prior outputs.",
+          "Do not ask follow-up questions. If details are missing, infer reasonable choices from the provided input.",
+          imageSource || imageDataUrl || videoSource
+            ? "Use the attached visual context for the response."
             : "",
         ]
           .filter(Boolean)
-          .join("\n\n") || "Describe the content.";
+          .join("\n\n") || "Analyze the content.";
 
       try {
-        if (videoSource) {
-          setNodeOutput(node.id, "Analyzing video...", false);
+        if (imageSource || imageDataUrl || videoSource) {
+          setNodeOutput(node.id, "Analyzing...", false);
         }
 
         const res = await fetch(`${getBackendUrl()}/api/run-llm`, {
@@ -1735,7 +2403,7 @@ export default function WorkflowPage(): JSX.Element {
           body: JSON.stringify({
             prompt:
               requestPrompt ||
-              (videoSource ? "Describe the video." : "Describe the image."),
+              "Analyze the connected input.",
             model: node.data.model || "gemini-2.5-flash",
             imageUrl: imageSource || undefined,
             imageDataUrl: imageDataUrl || undefined,
@@ -1769,42 +2437,37 @@ export default function WorkflowPage(): JSX.Element {
           abortControllerRef.current?.signal.aborted ||
           err?.name === "AbortError"
         ) {
+          completeNodeRun("stopped", "Stopped");
           return;
         }
 
         nodeOutput = `Error: ${err.message}`;
         setNodeOutput(node.id, nodeOutput, true);
+        completeNodeRun("failed", nodeOutput, err.message);
       }
     }
 
-    if (node.type === "outputNode") {
-      const prev = inputs[0] as any;
-      const outputValue =
-        incomingOutput ||
-        prev?.output ||
-        prev?.uploadedImage ||
-        prev?.image ||
-        prev?.uploadedVideo ||
-        prev?.video ||
-        prev?.prompt ||
-        "No output yet";
-
-      nodeOutput = outputValue;
-
-      setNodes((nds) =>
-        nds.map((n) =>
-          n.id === node.id
-            ? { ...n, data: { ...n.data, output: outputValue } }
-            : n,
-        ),
-      );
-    }
-
     if (stopWorkflowRef.current || abortControllerRef.current?.signal.aborted) {
+      completeNodeRun("stopped", "Stopped");
       return;
     }
 
     runOutputsRef.current[node.id] = nodeOutput;
+    completeNodeRun(
+      nodeOutput.startsWith("Error:") ? "failed" : "success",
+      nodeOutput,
+      nodeOutput.startsWith("Error:")
+        ? nodeOutput.replace(/^Error:\s*/, "")
+        : undefined,
+    );
+
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === node.id ? { ...n, data: { ...n.data, running: false } } : n,
+      ),
+    );
+
+    if (!runDownstream) return;
 
     const outgoing = graphEdges.filter((e) => e.source === node.id);
 
@@ -1826,12 +2489,6 @@ export default function WorkflowPage(): JSX.Element {
         );
       }
     }
-
-    setNodes((nds) =>
-      nds.map((n) =>
-        n.id === node.id ? { ...n, data: { ...n.data, running: false } } : n,
-      ),
-    );
   };
 
   useEffect(() => {
@@ -1840,20 +2497,59 @@ export default function WorkflowPage(): JSX.Element {
   }, [nodes]);
 
   useEffect(() => {
+    setNodes((nds) =>
+      nds.map((node) => {
+        const connectedInputs = getConnectedInputsForNode(node.id, edges);
+
+        if (
+          JSON.stringify(node.data?.connectedInputs || {}) ===
+          JSON.stringify(connectedInputs)
+        ) {
+          return node;
+        }
+
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            connectedInputs,
+          },
+        };
+      }),
+    );
+  }, [edges, setNodes]);
+
+  useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
 
       if (tag === "INPUT" || tag === "TEXTAREA") return;
 
-      if (e.key === "Backspace") {
-        deleteNode();
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        undoGraph();
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        redoGraph();
+        return;
+      }
+
+      if (e.key === "Backspace" || e.key === "Delete") {
+        if (menu) {
+          deleteNode();
+        } else {
+          deleteSelectedNodes();
+        }
       }
     };
 
     window.addEventListener("keydown", handleKey);
 
     return () => window.removeEventListener("keydown", handleKey);
-  }, [menu, nodes]);
+  }, [deleteSelectedNodes, menu, nodes, redoGraph, undoGraph]);
 
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
@@ -1895,26 +2591,282 @@ export default function WorkflowPage(): JSX.Element {
     n.label.toLowerCase().includes(search.toLowerCase()),
   );
 
-  const getPersistableNodes = () => {
-    return nodes.map((node: any) => {
-      if (node.type !== "videoNode") return node;
+  const attachHandlers = (nodeList: Node[]) => {
+    return nodeList.map((node) => {
+      if (
+        node.type === "textNode" ||
+        node.type === "imageGenNode" ||
+        node.type === "videoGenNode" ||
+        node.type === "llmNode" ||
+        node.type === "cropNode" ||
+        node.type === "extractFrame"
+      ) {
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            ...(node.type === "llmNode" && {
+              model: node.data.model || "gemini-2.5-flash",
+            }),
+            onChange: (value: string) => {
+              setNodes((nds) =>
+                nds.map((n) =>
+                  n.id === node.id
+                    ? { ...n, data: { ...n.data, prompt: value } }
+                    : n,
+                ),
+              );
+            },
+            onModelChange: (value: string) => {
+              setNodes((nds) =>
+                nds.map((n) =>
+                  n.id === node.id
+                    ? { ...n, data: { ...n.data, model: value } }
+                    : n,
+                ),
+              );
+            },
+            onParamChange: (key: string, value: string) => {
+              setNodes((nds) =>
+                nds.map((n) =>
+                  n.id === node.id
+                    ? { ...n, data: { ...n.data, [key]: value } }
+                    : n,
+                ),
+              );
+            },
+          },
+        };
+      }
 
-      const uploadedVideo = node.data.uploadedVideo || "";
-      const video = node.data.video?.startsWith?.("blob:")
-        ? uploadedVideo
-        : node.data.video || uploadedVideo;
+      if (node.type === "videoNode") {
+        const savedVideo =
+          node.data.uploadedVideo ||
+          (node.data.video?.startsWith?.("blob:") ? "" : node.data.video) ||
+          "";
 
-      return {
-        ...node,
-        data: {
-          ...node.data,
-          video,
-          uploadedVideo,
-          uploading: false,
-        },
-      };
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            video: savedVideo,
+            uploadedVideo: savedVideo,
+            uploading: false,
+            error: false,
+            errorMessage: "",
+            onUpload: async (file: File) => {
+              try {
+                setNodes((nds) =>
+                  nds.map((n) =>
+                    n.id === node.id
+                      ? {
+                          ...n,
+                          data: { ...n.data, uploading: true, error: false },
+                        }
+                      : n,
+                  ),
+                );
+                const url = await uploadVideo(file);
+                setNodes((nds) =>
+                  nds.map((n) =>
+                    n.id === node.id
+                      ? {
+                          ...n,
+                          data: {
+                            ...n.data,
+                            video: url,
+                            uploadedVideo: url,
+                            output: url,
+                            uploading: false,
+                            error: false,
+                            errorMessage: "",
+                          },
+                        }
+                      : n,
+                  ),
+                );
+              } catch (err: any) {
+                setNodes((nds) =>
+                  nds.map((n) =>
+                    n.id === node.id
+                      ? {
+                          ...n,
+                          data: {
+                            ...n.data,
+                            uploading: false,
+                            error: true,
+                            errorMessage: err?.message || "Upload failed",
+                          },
+                        }
+                      : n,
+                  ),
+                );
+              }
+            },
+          },
+        };
+      }
+
+      if (node.type === "imageNode") {
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            onUpload: async (file: File) => {
+              const previewUrl = URL.createObjectURL(file);
+              setNodes((nds) =>
+                nds.map((n) =>
+                  n.id === node.id
+                    ? {
+                        ...n,
+                        data: {
+                          ...n.data,
+                          image: previewUrl,
+                          uploadedImage: "",
+                          uploading: true,
+                          error: false,
+                        },
+                      }
+                    : n,
+                ),
+              );
+
+              try {
+                const url = await uploadImage(file);
+                if (!url) throw new Error("Upload failed");
+                setNodes((nds) =>
+                  nds.map((n) =>
+                    n.id === node.id
+                      ? {
+                          ...n,
+                          data: {
+                            ...n.data,
+                            image: url,
+                            uploadedImage: url,
+                            output: url,
+                            uploading: false,
+                          },
+                        }
+                      : n,
+                  ),
+                );
+              } catch {
+                setNodes((nds) =>
+                  nds.map((n) =>
+                    n.id === node.id
+                      ? {
+                          ...n,
+                          data: { ...n.data, uploading: false, error: true },
+                        }
+                      : n,
+                  ),
+                );
+              }
+            },
+          },
+        };
+      }
+
+      return node;
     });
   };
+
+  const onDragStartNode = (
+    event: React.DragEvent<HTMLButtonElement>,
+    type: NodeType,
+  ) => {
+    event.dataTransfer.setData("application/nextflow-node", type);
+    event.dataTransfer.effectAllowed = "move";
+  };
+
+  const onCanvasDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  };
+
+  const onCanvasDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const type = event.dataTransfer.getData(
+      "application/nextflow-node",
+    ) as NodeType;
+
+    if (!nodeTypeMap[type]) return;
+
+    const bounds = flowWrapperRef.current?.getBoundingClientRect();
+    const viewport = viewportRef.current;
+    const position = {
+      x: ((event.clientX - (bounds?.left || 0)) - viewport.x) / viewport.zoom,
+      y: ((event.clientY - (bounds?.top || 0)) - viewport.y) / viewport.zoom,
+    };
+
+    addNode(type, position);
+  };
+
+  const getPersistableNodes = () => {
+    return nodes
+      .filter((node) => node.type !== "outputNode")
+      .map((node: any) => {
+        if (node.type !== "videoNode") return node;
+
+        const uploadedVideo = node.data.uploadedVideo || "";
+        const video = node.data.video?.startsWith?.("blob:")
+          ? uploadedVideo
+          : node.data.video || uploadedVideo;
+
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            video,
+            uploadedVideo,
+            uploading: false,
+          },
+        };
+      });
+  };
+
+  const normalizeWorkflowEdge = (
+    edge: Edge,
+    nodeList: FlowNode[] = nodes,
+  ): Edge => {
+    const sourceNode = getNodeById(nodeList, edge.source);
+    const targetNode = getNodeById(nodeList, edge.target);
+    const nextEdge: Edge = {
+      ...edge,
+      type: edge.type || "pulse",
+    };
+
+    if (!nextEdge.targetHandle) {
+      if (targetNode?.type === "llmNode") {
+        if (visualNodeTypes.has(sourceNode?.type || "")) {
+          nextEdge.targetHandle = "images";
+        } else {
+          nextEdge.targetHandle = "user_message";
+        }
+      } else if (targetNode?.type === "cropNode") {
+        nextEdge.targetHandle = "image_url";
+      } else if (targetNode?.type === "extractFrame") {
+        nextEdge.targetHandle =
+          sourceNode?.type === "textNode" ? "timestamp" : "video_url";
+      }
+    }
+
+    return {
+      ...nextEdge,
+      id:
+        nextEdge.id ||
+        `edge-${nextEdge.source}-${nextEdge.sourceHandle || "out"}-${nextEdge.target}-${nextEdge.targetHandle || "in"}`,
+    };
+  };
+
+  const getPersistableEdges = () =>
+    edges
+      .filter(
+        (edge) =>
+          !edge.source.startsWith("output-") &&
+          !edge.target.startsWith("output-"),
+      )
+      .map((edge) => normalizeWorkflowEdge(edge));
 
   const saveWorkflow = async () => {
     const workflowId = getWorkflowIdFromPath();
@@ -1927,7 +2879,7 @@ export default function WorkflowPage(): JSX.Element {
       body: JSON.stringify({
         name,
         nodes: getPersistableNodes(),
-        edges,
+        edges: getPersistableEdges(),
         history,
       }),
     });
@@ -1940,7 +2892,7 @@ export default function WorkflowPage(): JSX.Element {
       name,
       exportedAt: new Date().toISOString(),
       nodes: getPersistableNodes(),
-      edges,
+      edges: getPersistableEdges(),
       history,
     };
     const json = JSON.stringify(
@@ -1957,6 +2909,37 @@ export default function WorkflowPage(): JSX.Element {
     link.download = `${safeName}.json`;
     link.click();
     URL.revokeObjectURL(url);
+  };
+
+  const importWorkflowJson = async (file: File) => {
+    try {
+      const payload = JSON.parse(await file.text());
+      const importedNodes = Array.isArray(payload.nodes) ? payload.nodes : [];
+      const importedEdges = Array.isArray(payload.edges) ? payload.edges : [];
+      const importedNodeIds = new Set(
+        importedNodes.map((node: FlowNode) => node.id),
+      );
+
+      rememberGraphState();
+      setNodes(attachHandlers(importedNodes));
+      setEdges(
+        importedEdges
+          .filter(
+            (edge: Edge) =>
+              importedNodeIds.has(edge.source) &&
+              importedNodeIds.has(edge.target),
+          )
+          .map((edge: Edge) => normalizeWorkflowEdge(edge, importedNodes)),
+      );
+      setName(payload.name || "Imported Workflow");
+      setHistory(payload.history || { runs: [] });
+    } catch {
+      showUiError("Could not import this workflow JSON.");
+    } finally {
+      if (importInputRef.current) {
+        importInputRef.current.value = "";
+      }
+    }
   };
 
   useEffect(() => {
@@ -1983,7 +2966,9 @@ export default function WorkflowPage(): JSX.Element {
 
     const workflows = await res.json();
     const data = Array.isArray(workflows)
-      ? workflows.find((workflow: { id?: string }) => workflow.id === workflowId)
+      ? workflows.find(
+          (workflow: { id?: string }) => workflow.id === workflowId,
+        )
       : null;
 
     if (!data) {
@@ -2084,6 +3069,7 @@ export default function WorkflowPage(): JSX.Element {
                               ...n.data,
                               video: url,
                               uploadedVideo: url,
+                              output: url,
                               uploading: false,
                               error: false,
                               errorMessage: "",
@@ -2152,6 +3138,7 @@ export default function WorkflowPage(): JSX.Element {
                               ...n.data,
                               image: url,
                               uploadedImage: url,
+                              output: url,
                               uploading: false,
                             },
                           }
@@ -2179,8 +3166,19 @@ export default function WorkflowPage(): JSX.Element {
       });
     };
 
-    setNodes(attachHandlers(data.nodes || []));
-    setEdges(data.edges || []);
+    const loadedNodes = (data.nodes || []).filter(
+      (node: FlowNode) => node.type !== "outputNode",
+    );
+    const loadedNodeIds = new Set(loadedNodes.map((node: FlowNode) => node.id));
+    setNodes(attachHandlers(loadedNodes));
+    setEdges(
+      (data.edges || [])
+        .filter(
+          (edge: Edge) =>
+            loadedNodeIds.has(edge.source) && loadedNodeIds.has(edge.target),
+        )
+        .map((edge: Edge) => normalizeWorkflowEdge(edge, loadedNodes)),
+    );
     setName(data.name || "Untitled Workflow");
     setHistory(data.history || {});
     setAccessError("");
@@ -2303,6 +3301,8 @@ export default function WorkflowPage(): JSX.Element {
                   <button
                     key={n.id}
                     type="button"
+                    draggable
+                    onDragStart={(event) => onDragStartNode(event, n.id)}
                     onClick={() => addNode(n.id)}
                     className="flex size-10 items-center justify-center rounded-lg border border-white/10 bg-zinc-900 text-xs font-semibold text-white/65 hover:bg-zinc-800 hover:text-white"
                     aria-label={`Add ${n.label}`}
@@ -2336,6 +3336,8 @@ export default function WorkflowPage(): JSX.Element {
                       <button
                         key={n.id}
                         type="button"
+                        draggable
+                        onDragStart={(event) => onDragStartNode(event, n.id)}
                         onClick={() => {
                           addNode(n.id);
                           setOpen(false);
@@ -2373,6 +3375,8 @@ export default function WorkflowPage(): JSX.Element {
                     <button
                       key={n.id}
                       type="button"
+                      draggable
+                      onDragStart={(event) => onDragStartNode(event, n.id)}
                       onClick={() => {
                         addNode(n.id);
                         setOpen(false);
@@ -2396,7 +3400,12 @@ export default function WorkflowPage(): JSX.Element {
         />
       )}
 
-      <div className="flex-1 min-w-0 relative">
+      <div
+        ref={flowWrapperRef}
+        className="flex-1 min-w-0 relative"
+        onDragOver={onCanvasDragOver}
+        onDrop={onCanvasDrop}
+      >
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -2405,19 +3414,32 @@ export default function WorkflowPage(): JSX.Element {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onEdgeClick={(_, edge) => {
+            rememberGraphState();
             setEdges((eds) => eds.filter((e) => e.id !== edge.id));
           }}
           onEdgesDelete={(deletedEdges) => {
+            rememberGraphState();
             setEdges((eds) => eds.filter((e) => !deletedEdges.includes(e)));
           }}
           onConnect={onConnect}
+          onMove={(_, viewport) => {
+            viewportRef.current = viewport;
+          }}
           onNodeContextMenu={onNodeContextMenu}
           onPaneClick={() => {
             setMenu(null);
             setSelectedNode(null);
           }}
-          onNodeDragStart={() => setMenu(null)}
+          onNodeDragStart={() => {
+            setMenu(null);
+            rememberGraphState();
+          }}
           panActivationKeyCode={null}
+          defaultViewport={INITIAL_WORKFLOW_VIEWPORT}
+          fitView
+          fitViewOptions={WORKFLOW_FIT_VIEW_OPTIONS}
+          minZoom={0.25}
+          maxZoom={1.6}
           proOptions={{ hideAttribution: true }}
           defaultEdgeOptions={{
             type: "beizer",
@@ -2434,6 +3456,23 @@ export default function WorkflowPage(): JSX.Element {
         >
           <div className="absolute right-3 top-14 z-50 flex md:flex-row flex-col items-end gap-2 md:right-4 md:top-4">
             <button
+              onClick={undoGraph}
+              aria-label="Undo"
+              title="Undo"
+              className="rounded-md border border-white/10 bg-[#111] px-2 py-1.5 text-xs text-white/70 shadow hover:bg-[#1a1a1a] hover:text-white"
+            >
+              <Undo2Icon size={15} />
+            </button>
+            <button
+              onClick={redoGraph}
+              aria-label="Redo"
+              title="Redo"
+              className="rounded-md border border-white/10 bg-[#111] px-2 py-1.5 text-xs text-white/70 shadow hover:bg-[#1a1a1a] hover:text-white"
+            >
+             <Redo2Icon size={15} />
+
+            </button>
+            <button
               onClick={runWorkflow}
               className={`px-3 py-1.5 rounded-md text-xs text-white/80 shadow border border-white/10 ${
                 isWorkflowRunning
@@ -2443,6 +3482,26 @@ export default function WorkflowPage(): JSX.Element {
             >
               {isWorkflowRunning ? "Stop Workflow" : "Run Workflow"}
             </button>
+            <button
+              onClick={() => importInputRef.current?.click()}
+              aria-label="Import workflow JSON"
+              title="Import workflow JSON"
+              className="rounded-md border border-white/10 bg-[#111] px-2 py-1.5 text-xs text-white/70 shadow hover:bg-[#1a1a1a] hover:text-white"
+            >
+              Import
+            </button>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json,.json"
+              hidden
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) {
+                  importWorkflowJson(file);
+                }
+              }}
+            />
             <button
               onClick={exportWorkflowJson}
               aria-label="Export workflow JSON"
@@ -2456,10 +3515,18 @@ export default function WorkflowPage(): JSX.Element {
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="md:w-[min(260px,calc(100vw-6rem))] w-200px rounded-md border border-white/10 bg-black/60 px-4 py-2 text-sm text-white outline-none backdrop-blur-md md:ml-5 md:mt-8"
+              className="w-[min(220px,calc(100vw-6rem))] rounded-md border border-white/10 bg-black/60 px-4 py-2 text-sm text-white outline-none backdrop-blur-md md:ml-5 md:mt-8 md:w-[min(260px,calc(100vw-6rem))]"
             />
           </div>
           <Background gap={20} size={2} />
+          <MiniMap
+            nodeColor="#3b82f6"
+            maskColor="rgba(0,0,0,0.2)"
+            style={{
+              backgroundColor: "#111",
+              borderRadius: 16,
+            }}
+          />
         </ReactFlow>
       </div>
 
@@ -2579,7 +3646,7 @@ export default function WorkflowPage(): JSX.Element {
               <div>
                 <div className="text-sm font-semibold">History</div>
                 <p className="text-xs text-white/40">
-                  {allHistory.length} events
+                  {runHistory.length} runs
                 </p>
               </div>
               <div className="flex items-center gap-1">
@@ -2614,24 +3681,136 @@ export default function WorkflowPage(): JSX.Element {
             </div>
             <div className="node-scroll flex-1 overflow-y-auto px-4 py-4">
               <div className="flex flex-col gap-3">
-                {allHistory.length === 0 && (
+                {runHistory.length === 0 && (
                   <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-xs text-white/45">
-                    No history yet.
+                    No workflow runs yet.
                   </div>
                 )}
-                {allHistory.map((h, i) => (
-                  <div
-                    key={i}
-                    className="rounded-lg border border-white/5 bg-white/5 p-2.5 text-xs leading-relaxed text-white/70"
-                  >
-                    {h.type === "ADD_NODE" &&
-                      `Added ${(h.nodeType || "Unknown").charAt(0).toUpperCase() + (h.nodeType || "Unknown").slice(1)}`}
-                    {h.type === "DELETE_NODE" &&
-                      `Deleted ${(h.nodeType || "Unknown").charAt(0).toUpperCase() + (h.nodeType || "Unknown").slice(1)}`}
-                    {h.type === "CONNECT" &&
-                      `Connected ${(h.sourceType || h.source || "Unknown").charAt(0).toUpperCase() + (h.sourceType || h.source || "Unknown").slice(1)} to ${(h.targetType || h.target || "Unknown").charAt(0).toUpperCase() + (h.targetType || h.target || "Unknown").slice(1)}`}
-                  </div>
-                ))}
+                {runHistory.map((run) => {
+                  const isExpanded = expandedRunId === run.id;
+
+                  return (
+                    <div
+                      key={run.id}
+                      className="overflow-hidden rounded-lg border border-white/10 bg-white/[0.04] text-xs text-white/70"
+                    >
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedRunId(isExpanded ? null : run.id)
+                        }
+                        className="w-full p-3 text-left hover:bg-white/[0.03]"
+                      >
+                        <div className="mb-2 flex items-start justify-between gap-2">
+                          <div>
+                            <div className="font-semibold text-white/85">
+                              Run #{run.number}
+                            </div>
+                            <div className="mt-0.5 text-white/40">
+                              {formatRunDate(run.startedAt)}
+                            </div>
+                          </div>
+                          <span
+                            className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium uppercase ${getStatusClasses(
+                              run.status,
+                            )}`}
+                          >
+                            {getStatusIcon(run.status)}
+                            {run.status}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-white/45">
+                          <span className="rounded border border-white/10 px-1.5 py-0.5 uppercase">
+                            {run.scope}
+                          </span>
+                          <span>{run.scopeLabel}</span>
+                          <span className="inline-flex items-center gap-1">
+                            <Timer className="size-3" />
+                            {formatDuration(run.durationMs)}
+                          </span>
+                        </div>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="border-t border-white/10 p-3">
+                          {run.nodeRuns.length === 0 ? (
+                            <div className="text-white/40">
+                              Waiting for node execution details...
+                            </div>
+                          ) : (
+                            <div className="flex flex-col gap-3">
+                              {run.nodeRuns.map((nodeRun) => (
+                                <div
+                                  key={nodeRun.nodeId}
+                                  className="rounded-md border border-white/5 bg-black/20 p-2.5"
+                                >
+                                  <div className="mb-2 flex items-center justify-between gap-2">
+                                    <div className="min-w-0">
+                                      <div className="truncate font-medium text-white/85">
+                                        {nodeRun.nodeLabel}
+                                      </div>
+                                      <div className="truncate text-[10px] text-white/35">
+                                        {nodeRun.nodeId}
+                                      </div>
+                                    </div>
+                                    <span
+                                      className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium uppercase ${getStatusClasses(
+                                        nodeRun.status,
+                                      )}`}
+                                    >
+                                      {getStatusIcon(nodeRun.status)}
+                                      {formatDuration(nodeRun.durationMs)}
+                                    </span>
+                                  </div>
+
+                                  {Object.keys(nodeRun.inputs).length > 0 && (
+                                    <div className="mb-2">
+                                      <div className="mb-1 text-[10px] uppercase text-white/35">
+                                        Inputs
+                                      </div>
+                                      <div className="space-y-1">
+                                        {Object.entries(nodeRun.inputs).map(
+                                          ([key, value]) => (
+                                            <div
+                                              key={key}
+                                              className="break-words rounded bg-white/[0.03] px-2 py-1 text-white/55"
+                                            >
+                                              <span className="text-white/35">
+                                                {key}:{" "}
+                                              </span>
+                                              {value}
+                                            </div>
+                                          ),
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  <div>
+                                    <div className="mb-1 text-[10px] uppercase text-white/35">
+                                      Output
+                                    </div>
+                                    <div
+                                      className={`break-words rounded px-2 py-1 ${
+                                        nodeRun.status === "failed"
+                                          ? "bg-red-400/10 text-red-100"
+                                          : "bg-white/[0.03] text-white/60"
+                                      }`}
+                                    >
+                                      {nodeRun.error ||
+                                        nodeRun.output ||
+                                        "No output captured"}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>

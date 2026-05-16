@@ -1,0 +1,212 @@
+{
+  "id": "cmp7zk9ns0004u0g75tnp2ee5",
+  "name": "Sample Workflow-1",
+  "exportedAt": "2026-05-16T09:31:39.459Z",
+  "nodes": [
+    {
+      "id": "video-1777245513158",
+      "data": {
+        "error": false,
+        "label": "video",
+        "video": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-video-1777245515750-hdic1lfts9g.mp4",
+        "output": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-video-1777245515750-hdic1lfts9g.mp4",
+        "prompt": "",
+        "running": false,
+        "uploading": false,
+        "errorMessage": "",
+        "uploadedVideo": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-video-1777245515750-hdic1lfts9g.mp4"
+      },
+      "type": "videoNode",
+      "position": {
+        "x": -176.5883012651833,
+        "y": 128.76045888602053
+      },
+      "width": 300,
+      "height": 211
+    },
+    {
+      "id": "frame-1777245518774",
+      "data": {
+        "time": "5",
+        "error": false,
+        "image": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1778919989361-9223c734.jpg",
+        "label": "frame",
+        "model": "",
+        "format": "jpg",
+        "output": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1778919989361-9223c734.jpg",
+        "prompt": "",
+        "running": false,
+        "provider": "",
+        "uploadedImage": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1778919989361-9223c734.jpg",
+        "connectedInputs": {
+          "video_url": true
+        }
+      },
+      "type": "extractFrame",
+      "position": {
+        "x": 302.9253332393204,
+        "y": 330.37844105018286
+      },
+      "width": 300,
+      "height": 429
+    },
+    {
+      "id": "text-1777245608728",
+      "data": {
+        "label": "text",
+        "prompt": "You are a social media manager. Create a tweet-length marketing post based on the product image and video frame.",
+        "running": false
+      },
+      "type": "textNode",
+      "position": {
+        "x": 696.7120779573479,
+        "y": -148.54217312795956
+      },
+      "width": 280,
+      "height": 199
+    },
+    {
+      "id": "llm-1777245643070",
+      "data": {
+        "error": false,
+        "label": "llm",
+        "model": "gemini-2.5-flash",
+        "output": "Discover the elegance of simplicity. ✨ Our clear, refillable spray bottle, perfectly presented for your premium beauty essentials. A blank canvas awaiting your unique brand.\n\n#BeautyPackaging #MinimalistDesign #SkincareSolutions #ProductLaunch",
+        "prompt": "do as the text node say",
+        "running": false,
+        "connectedInputs": {
+          "user_message": true,
+          "images": true
+        }
+      },
+      "type": "llmNode",
+      "position": {
+        "x": 1057.3944650539352,
+        "y": 77.9349644607603
+      },
+      "width": 340,
+      "height": 429
+    }
+  ],
+  "edges": [
+    {
+      "id": "reactflow__edge-text-1777245608728-llm-1777245643070",
+      "source": "text-1777245608728",
+      "target": "llm-1777245643070",
+      "type": "pulse",
+      "targetHandle": "user_message"
+    },
+    {
+      "id": "edge-frame-1777245518774-output-llm-1777245643070-images-1778914172512",
+      "source": "frame-1777245518774",
+      "target": "llm-1777245643070",
+      "type": "pulse",
+      "targetHandle": "images"
+    },
+    {
+      "id": "edge-video-1777245513158-out-frame-1777245518774-video_url-1778921895888",
+      "source": "video-1777245513158",
+      "target": "frame-1777245518774",
+      "type": "pulse",
+      "targetHandle": "video_url"
+    }
+  ],
+  "history": {
+    "runs": [
+      {
+        "id": "run-1778921953606",
+        "type": "WORKFLOW_RUN",
+        "scope": "full",
+        "number": 1,
+        "status": "success",
+        "endedAt": 1778922255899,
+        "nodeRuns": [
+          {
+            "inputs": {},
+            "nodeId": "image-1777238379072",
+            "output": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-image-1777238418198.jpeg",
+            "status": "success",
+            "nodeType": "imageNode",
+            "nodeLabel": "Image",
+            "durationMs": 32
+          },
+          {
+            "inputs": {
+              "prompt": "You are a professional marketing copywriter. Generate a compelling one-paragraph product description"
+            },
+            "nodeId": "text-1777238420417",
+            "output": "You are a professional marketing copywriter. Generate a compelling one-paragraph product description",
+            "status": "success",
+            "nodeType": "textNode",
+            "nodeLabel": "Text",
+            "durationMs": 0
+          },
+          {
+            "inputs": {
+              "prompt": "Product: Classic Leather Crossbody Bag\n\nFeatures: Premium leather finish, adjustable shoulder strap, secure flap closure, compact yet spacious design for daily essentials."
+            },
+            "nodeId": "text-1777238447952",
+            "output": "Product: Classic Leather Crossbody Bag\n\nFeatures: Premium leather finish, adjustable shoulder strap, secure flap closure, compact yet spacious design for daily essentials.",
+            "status": "success",
+            "nodeType": "textNode",
+            "nodeLabel": "Text",
+            "durationMs": 0
+          },
+          {
+            "inputs": {
+              "x": "50",
+              "y": "50",
+              "width": "80",
+              "height": "80",
+              "input_1": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-image-1777238418198.jpeg"
+            },
+            "nodeId": "crop-1777238395617",
+            "output": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1778922079405-38d2bcb1.png",
+            "status": "success",
+            "nodeType": "cropNode",
+            "nodeLabel": "Crop",
+            "durationMs": 152593
+          },
+          {
+            "inputs": {
+              "model": "gemini-2.5-flash",
+              "prompt": "take the required description from text nodes",
+              "input_1": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1778922079405-38d2bcb1.png",
+              "input_2": "Product: Classic Leather Crossbody Bag\n\nFeatures: Premium leather finish, adjustable shoulder strap, secure flap closure, compact yet spacious design for daily essentials.",
+              "input_3": "You are a professional marketing copywriter. Generate a compelling one-paragraph product description"
+            },
+            "nodeId": "llm-1777238632520",
+            "output": "Discover timeless elegance with our Classic Leather Crossbody Bag, meticulously crafted from a rich, warm tan premium leather that exudes sophistication and features a subtle pe...",
+            "status": "success",
+            "nodeType": "llmNode",
+            "nodeLabel": "Llm",
+            "durationMs": 149648
+          }
+        ],
+        "startedAt": 1778921953606,
+        "durationMs": 302293,
+        "scopeLabel": "Full Workflow"
+      }
+    ],
+    "events": [
+      {
+        "time": 1778921943602,
+        "type": "CONNECT",
+        "sourceType": "text",
+        "targetType": "llm"
+      },
+      {
+        "time": 1778921937535,
+        "type": "CONNECT",
+        "sourceType": "text",
+        "targetType": "llm"
+      },
+      {
+        "time": 1778921932211,
+        "type": "CONNECT",
+        "sourceType": "crop",
+        "targetType": "llm"
+      }
+    ]
+  }
+}

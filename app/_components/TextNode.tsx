@@ -1,4 +1,5 @@
 import { JSX } from "react";
+import { Trash2 } from "lucide-react";
 import { Handle, Position } from "reactflow";
 import InlineNodeOutput from "./InlineNodeOutput";
 
@@ -12,6 +13,7 @@ type Props = {
     output?: string;
     error?: boolean;
     onChange?: (value: string) => void;
+    onDelete?: () => void;
   };
 };
 
@@ -42,9 +44,23 @@ export default function TextNode({ data }: Props): JSX.Element {
           <p className="text-[11px] font-medium uppercase tracking-wide text-white/45">
             Text
           </p>
-          {data.running && (
-            <span className="text-[10px] text-purple-200">Running</span>
-          )}
+          <div className="flex items-center gap-2">
+            {data.running && (
+              <span className="text-[10px] text-purple-200">Running</span>
+            )}
+            <button
+              type="button"
+              aria-label="Delete node"
+              title="Delete node"
+              onClick={(event) => {
+                event.stopPropagation();
+                data.onDelete?.();
+              }}
+              className="nodrag nopan rounded p-1 text-white/35 hover:bg-red-500/10 hover:text-red-300"
+            >
+              <Trash2 className="size-3.5" />
+            </button>
+          </div>
         </div>
       </div>
 

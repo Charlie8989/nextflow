@@ -1,4 +1,4 @@
-import { UploadIcon } from "lucide-react";
+import { Trash2, UploadIcon } from "lucide-react";
 import { JSX, useRef } from "react";
 import { Handle, Position } from "reactflow";
 import InlineNodeOutput from "./InlineNodeOutput";
@@ -12,6 +12,7 @@ type Props = {
     uploading?: boolean;
     error?: boolean;
     onUpload?: (file: File) => void;
+    onDelete?: () => void;
   };
 };
 
@@ -37,9 +38,23 @@ export default function ImageNode({ data }: Props): JSX.Element {
         <p className="text-[11px] font-medium uppercase tracking-wide text-white/45">
           Upload Image
         </p>
-        {data.running && (
-          <span className="text-[10px] text-purple-200">Running</span>
-        )}
+        <div className="flex items-center gap-2">
+          {data.running && (
+            <span className="text-[10px] text-purple-200">Running</span>
+          )}
+          <button
+            type="button"
+            aria-label="Delete node"
+            title="Delete node"
+            onClick={(event) => {
+              event.stopPropagation();
+              data.onDelete?.();
+            }}
+            className="nodrag nopan rounded p-1 text-white/35 hover:bg-red-500/10 hover:text-red-300"
+          >
+            <Trash2 className="size-3.5" />
+          </button>
+        </div>
       </div>
       <div
         onClick={!preview && !data.uploading ? openFilePicker : undefined}

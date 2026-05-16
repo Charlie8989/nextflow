@@ -136,6 +136,8 @@ export default function WorkflowPage(): JSX.Element {
   const { isLoaded: isUserLoaded, isSignedIn, user } = useUser();
   const [nodes, setNodes, rawOnNodesChange] = useNodesState<any>([]);
   const [edges, setEdges, rawOnEdgesChange] = useEdgesState<Edge[]>([]);
+  const nodesRef = useRef<FlowNode[]>([]);
+  const edgesRef = useRef<Edge[]>([]);
   const [history, setHistory] = useState<WorkflowHistoryState>({ runs: [] });
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<FlowNode | null>(null);
@@ -165,6 +167,14 @@ export default function WorkflowPage(): JSX.Element {
   const edgeTypes = {
     pulse: PulseEdge,
   };
+
+  useEffect(() => {
+    nodesRef.current = nodes;
+  }, [nodes]);
+
+  useEffect(() => {
+    edgesRef.current = edges;
+  }, [edges]);
 
   const getTransloaditUrl = (result: any) => {
     const results = result?.results;
@@ -439,14 +449,14 @@ export default function WorkflowPage(): JSX.Element {
 
   const rememberGraphState = useCallback(() => {
     undoStackRef.current.push({
-      nodes,
-      edges,
+      nodes: nodesRef.current,
+      edges: edgesRef.current,
     });
     if (undoStackRef.current.length > 60) {
       undoStackRef.current.shift();
     }
     redoStackRef.current = [];
-  }, [edges, nodes]);
+  }, []);
 
   const undoGraph = useCallback(() => {
     const previous = undoStackRef.current.pop();
@@ -843,6 +853,7 @@ export default function WorkflowPage(): JSX.Element {
       data: {
         label: type,
         prompt: "",
+        onDelete: () => deleteNodeById(id),
 
         ...(type === "video" && {
           running: false,
@@ -1127,16 +1138,14 @@ export default function WorkflowPage(): JSX.Element {
     });
   };
 
-  const deleteNode = () => {
-    if (!menu) return;
-
-    const deleted = nodes.find((n) => n.id === menu.nodeId) as any;
+  const deleteNodeById = (nodeId: string) => {
+    const deleted = nodesRef.current.find((n) => n.id === nodeId) as any;
     if (!deleted) return;
 
     rememberGraphState();
-    setNodes((nds) => nds.filter((n) => n.id !== menu.nodeId));
+    setNodes((nds) => nds.filter((n) => n.id !== nodeId));
     setEdges((eds) =>
-      eds.filter((e) => e.source !== menu.nodeId && e.target !== menu.nodeId),
+      eds.filter((e) => e.source !== nodeId && e.target !== nodeId),
     );
 
     addActivityHistory({
@@ -1144,7 +1153,13 @@ export default function WorkflowPage(): JSX.Element {
       nodeType: deleted.data.label,
     });
 
+    setSelectedNode((current) => (current?.id === nodeId ? null : current));
     setMenu(null);
+  };
+
+  const deleteNode = () => {
+    if (!menu) return;
+    deleteNodeById(menu.nodeId);
   };
 
   const deleteSelectedNodes = () => {
@@ -2608,6 +2623,7 @@ export default function WorkflowPage(): JSX.Element {
             ...(node.type === "llmNode" && {
               model: node.data.model || "gemini-2.5-flash",
             }),
+            onDelete: () => deleteNodeById(node.id),
             onChange: (value: string) => {
               setNodes((nds) =>
                 nds.map((n) =>
@@ -2654,6 +2670,7 @@ export default function WorkflowPage(): JSX.Element {
             uploading: false,
             error: false,
             errorMessage: "",
+            onDelete: () => deleteNodeById(node.id),
             onUpload: async (file: File) => {
               try {
                 setNodes((nds) =>
@@ -2712,6 +2729,7 @@ export default function WorkflowPage(): JSX.Element {
           ...node,
           data: {
             ...node.data,
+            onDelete: () => deleteNodeById(node.id),
             onUpload: async (file: File) => {
               const previewUrl = URL.createObjectURL(file);
               setNodes((nds) =>
@@ -2994,6 +3012,7 @@ export default function WorkflowPage(): JSX.Element {
               ...(node.type === "llmNode" && {
                 model: node.data.model || "gemini-2.5-flash",
               }),
+              onDelete: () => deleteNodeById(node.id),
               onChange: (value: string) => {
                 setNodes((nds) =>
                   nds.map((n) =>
@@ -3040,6 +3059,7 @@ export default function WorkflowPage(): JSX.Element {
               uploading: false,
               error: false,
               errorMessage: "",
+              onDelete: () => deleteNodeById(node.id),
               onUpload: async (file: File) => {
                 try {
                   setNodes((nds) =>
@@ -3105,6 +3125,7 @@ export default function WorkflowPage(): JSX.Element {
             ...node,
             data: {
               ...node.data,
+              onDelete: () => deleteNodeById(node.id),
               onUpload: async (file: File) => {
                 const previewUrl = URL.createObjectURL(file);
 

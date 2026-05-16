@@ -1,42 +1,22 @@
 {
-  "id": "cmp84v23a0001w4g7juwinwjl",
+  "id": "cmp85s2mq000004juk7wo5kd8",
   "name": "Merged Workflow",
-  "exportedAt": "2026-05-16T09:30:42.080Z",
+  "exportedAt": "2026-05-16T20:29:48.119Z",
   "nodes": [
-    {
-      "id": "image-1777238379072",
-      "data": {
-        "error": false,
-        "image": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-image-1777238418198.jpeg",
-        "label": "image",
-        "prompt": "",
-        "running": false,
-        "uploading": false,
-        "uploadedImage": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-image-1777238418198.jpeg",
-        "output": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-image-1777238418198.jpeg"
-      },
-      "type": "imageNode",
-      "position": {
-        "x": 196.71005725832782,
-        "y": 299.50854053265766
-      },
-      "width": 320,
-      "height": 335
-    },
     {
       "id": "crop-1777238395617",
       "data": {
         "x": "50",
         "y": "50",
         "error": false,
-        "image": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1778923414839-4bb38a37.png",
+        "image": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1778963127335-499e6cba.png",
         "label": "crop",
         "width": "80",
         "height": "80",
-        "output": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1778923414839-4bb38a37.png",
+        "output": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1778963127335-499e6cba.png",
         "prompt": "",
         "running": false,
-        "uploadedImage": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1778923414839-4bb38a37.png",
+        "uploadedImage": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1778963127335-499e6cba.png",
         "connectedInputs": {
           "image_url": true
         }
@@ -52,11 +32,11 @@
     {
       "id": "text-1777238420417",
       "data": {
+        "error": false,
         "label": "text",
-        "prompt": "You are a professional marketing copywriter. Generate a compelling one-paragraph product description",
-        "running": false,
         "output": "You are a professional marketing copywriter. Generate a compelling one-paragraph product description",
-        "error": false
+        "prompt": "You are a professional marketing copywriter. Generate a compelling one-paragraph product description",
+        "running": false
       },
       "type": "textNode",
       "position": {
@@ -69,11 +49,11 @@
     {
       "id": "text-1777238447952",
       "data": {
+        "error": false,
         "label": "text",
-        "prompt": "Product: Classic Leather Crossbody Bag\n\nFeatures: Premium leather finish, adjustable shoulder strap, secure flap closure, compact yet spacious design for daily essentials.",
-        "running": false,
         "output": "Product: Classic Leather Crossbody Bag\n\nFeatures: Premium leather finish, adjustable shoulder strap, secure flap closure, compact yet spacious design for daily essentials.",
-        "error": false
+        "prompt": "Product: Classic Leather Crossbody Bag\n\nFeatures: Premium leather finish, adjustable shoulder strap, secure flap closure, compact yet spacious design for daily essentials.",
+        "running": false
       },
       "type": "textNode",
       "position": {
@@ -89,7 +69,7 @@
         "error": false,
         "label": "llm",
         "model": "gemini-2.5-flash",
-        "output": "Embrace timeless sophistication with our Classic Leather Crossbody Bag, meticulously crafted from a premium, richly textured leather that exudes enduring elegance. Designed for both style and practicality, it features a distinctive saddle-bag inspired secure flap closure, beautifully accented with tasteful gold-tone hardware to safeguard your belongings. The expertly stitched, adjustable shoulder strap ensures a comfortable and customized fit, making this compact yet surprisingly spacious bag the ideal companion for gracefully carrying your daily essentials from morning to night.",
+        "output": "Immerse yourself in pure audio bliss with these sleek, black over-ear headphones, engineered for both exceptional sound and unparalleled comfort. Designed with plush earcups and an adjustable headband, they promise a perfect fit for extended listening sessions, while their minimalist aesthetic ensures a stylish accessory for any outfit. Experience crystal-clear highs and deep, resonant bass, delivering a rich soundstage that brings your music, podcasts, and calls to life, wherever your day takes you.",
         "prompt": "take the required description from text nodes",
         "running": false,
         "connectedInputs": {
@@ -103,20 +83,20 @@
         "y": 357.27679240878246
       },
       "width": 340,
-      "height": 527
+      "height": 488
     },
     {
       "id": "video-1777376162277",
       "data": {
         "error": false,
         "label": "video",
-        "video": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/media-1777376276820-0.4515760288536247.mp4",
-        "output": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/media-1777376276820-0.4515760288536247.mp4",
+        "video": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/media-1778962829194-0.2676469865467994.mp4",
+        "output": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/media-1778962829194-0.2676469865467994.mp4",
         "prompt": "",
         "running": false,
         "uploading": false,
         "errorMessage": "",
-        "uploadedVideo": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/media-1777376276820-0.4515760288536247.mp4"
+        "uploadedVideo": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/media-1778962829194-0.2676469865467994.mp4"
       },
       "type": "videoNode",
       "position": {
@@ -129,15 +109,15 @@
     {
       "id": "text-1777376178660",
       "data": {
+        "error": false,
         "label": "text",
-        "prompt": "You are a social media manager. Create a tweet-length marketing post based on the product image and video frame",
-        "running": false,
         "output": "You are a social media manager. Create a tweet-length marketing post based on the product image and video frame",
-        "error": false
+        "prompt": "You are a social media manager. Create a tweet-length marketing post based on the product image and video frame",
+        "running": false
       },
       "type": "textNode",
       "position": {
-        "x": 1597.9827528778337,
+        "x": 1597.9827528778335,
         "y": 1066.605950476786
       },
       "width": 280,
@@ -148,15 +128,15 @@
       "data": {
         "time": "05",
         "error": false,
-        "image": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1778923413185-efe45c30.jpg",
+        "image": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1778963127346-a7bb0d08.jpg",
         "label": "frame",
         "model": "",
         "format": "jpg",
-        "output": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1778923413185-efe45c30.jpg",
+        "output": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1778963127346-a7bb0d08.jpg",
         "prompt": "",
         "running": false,
         "provider": "",
-        "uploadedImage": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1778923413185-efe45c30.jpg",
+        "uploadedImage": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1778963127346-a7bb0d08.jpg",
         "connectedInputs": {
           "video_url": true
         }
@@ -175,13 +155,12 @@
         "error": false,
         "label": "llm",
         "model": "gemini-2.5-flash",
-        "output": "Elevate your daily ritual with understated elegance. ✨ Our sleek, customizable spray bottle offers refined simplicity for your favorite mists, toners, or signature scents. Discover beauty in every detail. #MinimalistDesign #SkincareEssentials #HomeFragrance",
+        "output": "Experience audio perfection! 🎧 Immerse yourself in pure bliss with these sleek silver over-ear headphones. Designed for exceptional sound and unparalleled comfort, they're your stylish companion for crystal-clear music, podcasts, and calls. #WirelessAudio #PremiumSound #Headphones",
         "prompt": "do as the text says",
         "running": false,
         "connectedInputs": {
           "user_message": true,
-          "images": true,
-          "system_prompt": true
+          "images": true
         }
       },
       "type": "llmNode",
@@ -191,16 +170,29 @@
       },
       "width": 340,
       "height": 410
+    },
+    {
+      "id": "image-1778962807816",
+      "data": {
+        "error": false,
+        "image": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-image-1778963004514.jpeg",
+        "label": "image",
+        "output": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-image-1778963004514.jpeg",
+        "prompt": "",
+        "running": false,
+        "uploading": false,
+        "uploadedImage": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-image-1778963004514.jpeg"
+      },
+      "type": "imageNode",
+      "position": {
+        "x": 90.31542484195256,
+        "y": 348.86761014417084
+      },
+      "width": 320,
+      "height": 335
     }
   ],
   "edges": [
-    {
-      "id": "reactflow__edge-image-1777238379072-crop-1777238395617",
-      "source": "image-1777238379072",
-      "target": "crop-1777238395617",
-      "type": "pulse",
-      "targetHandle": "image_url"
-    },
     {
       "id": "reactflow__edge-text-1777238420417-llm-1777238632520",
       "source": "text-1777238420417",
@@ -244,47 +236,32 @@
       "targetHandle": "images"
     },
     {
-      "type": "pulse",
-      "style": {
-        "stroke": "#60a5fa",
-        "strokeWidth": 3
-      },
+      "id": "edge-llm-1777238632520-output-llm-1777377312788-system_prompt-1778923284733",
       "source": "llm-1777238632520",
-      "sourceHandle": "output",
       "target": "llm-1777377312788",
-      "targetHandle": "system_prompt",
-      "id": "edge-llm-1777238632520-output-llm-1777377312788-system_prompt-1778923284733"
+      "type": "pulse",
+      "targetHandle": "user_message"
+    },
+    {
+      "id": "edge-image-1778962807816-out-crop-1777238395617-image_url-1778962810800",
+      "source": "image-1778962807816",
+      "target": "crop-1777238395617",
+      "type": "pulse",
+      "targetHandle": "image_url"
     }
   ],
   "history": {
-    "events": [
-      {
-        "type": "CONNECT",
-        "sourceType": "llm",
-        "targetType": "llm",
-        "time": 1778923284733
-      }
-    ],
     "runs": [
       {
-        "id": "run-1778923289943",
+        "id": "run-1778963004455",
         "number": 1,
         "type": "WORKFLOW_RUN",
-        "startedAt": 1778923289943,
+        "startedAt": 1778963004455,
         "status": "success",
         "scope": "full",
         "scopeLabel": "Full Workflow",
-        "durationMs": 429103,
+        "durationMs": 377402,
         "nodeRuns": [
-          {
-            "nodeId": "image-1777238379072",
-            "nodeLabel": "Image",
-            "nodeType": "imageNode",
-            "status": "success",
-            "inputs": {},
-            "output": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-image-1777238418198.jpeg",
-            "durationMs": 44
-          },
           {
             "nodeId": "text-1777238420417",
             "nodeLabel": "Text",
@@ -313,7 +290,7 @@
             "nodeType": "videoNode",
             "status": "success",
             "inputs": {},
-            "output": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/media-1777376276820-0.4515760288536247.mp4",
+            "output": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/media-1778962829194-0.2676469865467994.mp4",
             "durationMs": 0
           },
           {
@@ -328,19 +305,28 @@
             "durationMs": 0
           },
           {
+            "nodeId": "image-1778962807816",
+            "nodeLabel": "Image",
+            "nodeType": "imageNode",
+            "status": "success",
+            "inputs": {},
+            "output": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-image-1778963004514.jpeg",
+            "durationMs": 385
+          },
+          {
             "nodeId": "crop-1777238395617",
             "nodeLabel": "Crop",
             "nodeType": "cropNode",
             "status": "success",
             "inputs": {
-              "input_1": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-image-1777238418198.jpeg",
+              "input_1": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-image-1778963004514.jpeg",
               "x": "50",
               "y": "50",
               "width": "80",
               "height": "80"
             },
-            "output": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1778923414839-4bb38a37.png",
-            "durationMs": 140775
+            "output": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1778963127335-499e6cba.png",
+            "durationMs": 122749
           },
           {
             "nodeId": "frame-1777376539092",
@@ -348,12 +334,12 @@
             "nodeType": "extractFrame",
             "status": "success",
             "inputs": {
-              "input_1": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/media-1777376276820-0.4515760288536247.mp4",
+              "input_1": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/media-1778962829194-0.2676469865467994.mp4",
               "time": "05",
               "format": "jpg"
             },
-            "output": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1778923413185-efe45c30.jpg",
-            "durationMs": 123616
+            "output": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1778963127346-a7bb0d08.jpg",
+            "durationMs": 122785
           },
           {
             "nodeId": "llm-1777238632520",
@@ -363,12 +349,12 @@
             "inputs": {
               "input_1": "You are a professional marketing copywriter. Generate a compelling one-paragraph product description",
               "input_2": "Product: Classic Leather Crossbody Bag\n\nFeatures: Premium leather finish, adjustable shoulder strap, secure flap closure, compact yet spacious design for daily essentials.",
-              "input_3": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1778923414839-4bb38a37.png",
+              "input_3": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1778963127335-499e6cba.png",
               "prompt": "take the required description from text nodes",
               "model": "gemini-2.5-flash"
             },
-            "output": "Embrace timeless sophistication with our Classic Leather Crossbody Bag, meticulously crafted from a premium, richly textured leather that exudes enduring elegance. Designed for ...",
-            "durationMs": 150960
+            "output": "Immerse yourself in pure audio bliss with these sleek, black over-ear headphones, engineered for both exceptional sound and unparalleled comfort. Designed with plush earcups and...",
+            "durationMs": 127070
           },
           {
             "nodeId": "llm-1777377312788",
@@ -377,16 +363,34 @@
             "status": "success",
             "inputs": {
               "input_1": "You are a social media manager. Create a tweet-length marketing post based on the product image and video frame",
-              "input_2": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1778923413185-efe45c30.jpg",
-              "input_3": "Embrace timeless sophistication with our Classic Leather Crossbody Bag, meticulously crafted from a premium, richly textured leather that exudes enduring elegance. Designed for ...",
+              "input_2": "https://hxgqkhpmksawptnwsuoi.supabase.co/storage/v1/object/public/media/workflow-processed-1778963127346-a7bb0d08.jpg",
+              "input_3": "Immerse yourself in pure audio bliss with these sleek, black over-ear headphones, engineered for both exceptional sound and unparalleled comfort. Designed with plush earcups and...",
               "prompt": "do as the text says",
               "model": "gemini-2.5-flash"
             },
-            "output": "Elevate your daily ritual with understated elegance. ✨ Our sleek, customizable spray bottle offers refined simplicity for your favorite mists, toners, or signature scents. Disco...",
-            "durationMs": 137298
+            "output": "Experience audio perfection! 🎧 Immerse yourself in pure bliss with these sleek silver over-ear headphones. Designed for exceptional sound and unparalleled comfort, they're your...",
+            "durationMs": 127158
           }
         ],
-        "endedAt": 1778923719046
+        "endedAt": 1778963381857
+      }
+    ],
+    "events": [
+      {
+        "time": 1778962810800,
+        "type": "CONNECT",
+        "sourceType": "image",
+        "targetType": "crop"
+      },
+      {
+        "time": 1778962807816,
+        "type": "ADD_NODE",
+        "nodeType": "image"
+      },
+      {
+        "time": 1778962806048,
+        "type": "DELETE_NODE",
+        "nodeType": "image"
       }
     ]
   }

@@ -1,4 +1,4 @@
-import { Download, Maximize2 } from "lucide-react";
+import { Download, Maximize2, Trash2 } from "lucide-react";
 import { JSX } from "react";
 import { Handle, Position } from "reactflow";
 import InlineNodeOutput from "./InlineNodeOutput";
@@ -13,6 +13,7 @@ type Props = {
     error?: boolean;
     connectedInputs?: Record<string, boolean>;
     onParamChange?: (key: string, value: string) => void;
+    onDelete?: () => void;
   };
 };
 
@@ -41,9 +42,23 @@ export default function ExtractFrameNode({ data }: Props): JSX.Element {
         <p className="text-[11px] font-medium uppercase tracking-wide text-white/45">
           Extract Frame
         </p>
-        {data.running && (
-          <span className="text-[10px] text-purple-200">Running</span>
-        )}
+        <div className="flex items-center gap-2">
+          {data.running && (
+            <span className="text-[10px] text-purple-200">Running</span>
+          )}
+          <button
+            type="button"
+            aria-label="Delete node"
+            title="Delete node"
+            onClick={(event) => {
+              event.stopPropagation();
+              data.onDelete?.();
+            }}
+            className="nodrag nopan rounded p-1 text-white/35 hover:bg-red-500/10 hover:text-red-300"
+          >
+            <Trash2 className="size-3.5" />
+          </button>
+        </div>
       </div>
       {preview && (
         <div className="border-b border-white/10 bg-black/25">

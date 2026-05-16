@@ -1,4 +1,4 @@
-import { Clapperboard } from "lucide-react";
+import { Clapperboard, Trash2 } from "lucide-react";
 import { JSX } from "react";
 import { Handle, Position } from "reactflow";
 
@@ -10,6 +10,7 @@ type Props = {
     running?: boolean;
     error?: boolean;
     onChange?: (value: string) => void;
+    onDelete?: () => void;
   };
 };
 
@@ -34,7 +35,21 @@ export default function VideoGenNode({ data }: Props): JSX.Element {
       <div className="p-3 text-xs">
         <div className="mb-3 flex items-center justify-between">
           <Clapperboard className="size-4 text-sky-300" />
-          <p className="text-white/50">AI Video</p>
+          <div className="flex items-center gap-2">
+            <p className="text-white/50">AI Video</p>
+            <button
+              type="button"
+              aria-label="Delete node"
+              title="Delete node"
+              onClick={(event) => {
+                event.stopPropagation();
+                data.onDelete?.();
+              }}
+              className="nodrag nopan rounded p-1 text-white/35 hover:bg-red-500/10 hover:text-red-300"
+            >
+              <Trash2 className="size-3.5" />
+            </button>
+          </div>
         </div>
 
         <div className="mb-3">

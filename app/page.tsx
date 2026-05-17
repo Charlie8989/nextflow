@@ -661,22 +661,24 @@ function DashboardHome(): JSX.Element {
             ref={mobileAccountRef}
             className="absolute right-4 top-4 z-20 md:hidden"
           >
-            {isLoaded && user ? (
-              <button
-                type="button"
-                onClick={() => setOpen((p) => !p)}
-                className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl border border-white/15 bg-black/45 shadow-lg"
-                aria-label="Open account menu"
-              >
-                <img
-                  src={user.imageUrl}
-                  alt="Account"
-                  className="h-full w-full object-cover"
-                />
-              </button>
-            ) : (
-              <div className="h-11 w-11 rounded-xl bg-white/10" />
-            )}
+            <div className="flex items-center gap-2">
+              {isLoaded && user ? (
+                <button
+                  type="button"
+                  onClick={() => setOpen((p) => !p)}
+                  className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl border border-white/15 bg-black/45 shadow-lg"
+                  aria-label="Open account menu"
+                >
+                  <img
+                    src={user.imageUrl}
+                    alt="Account"
+                    className="h-full w-full object-cover"
+                  />
+                </button>
+              ) : (
+                <div className="h-11 w-11 rounded-xl bg-white/10" />
+              )}
+            </div>
 
             {open && (
               <div className="absolute right-0 top-14 w-[min(260px,calc(100vw-2rem))] rounded-xl border border-white/10 bg-[#0b0b0b] p-3 shadow-2xl shadow-black/60">

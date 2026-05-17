@@ -3,6 +3,36 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --app-bg: #050505;
+  --app-bg-soft: #0b0b0b;
+  --app-panel: #111111;
+  --app-panel-muted: #18181b;
+  --app-border: rgba(255, 255, 255, 0.1);
+  --app-fg: #ffffff;
+  --app-muted: rgba(255, 255, 255, 0.68);
+  --app-subtle: rgba(255, 255, 255, 0.45);
+  --app-hover: rgba(255, 255, 255, 0.1);
+  --app-shadow: rgba(0, 0, 0, 0.5);
+}
+
+:root[data-theme="light"] {
+  --background: #f7f4ee;
+  --foreground: #171717;
+  --app-bg: #f7f4ee;
+  --app-bg-soft: #ffffff;
+  --app-panel: #ffffff;
+  --app-panel-muted: #f0ede7;
+  --app-border: rgba(24, 24, 27, 0.14);
+  --app-fg: #171717;
+  --app-muted: rgba(23, 23, 23, 0.7);
+  --app-subtle: rgba(23, 23, 23, 0.48);
+  --app-hover: rgba(23, 23, 23, 0.08);
+  --app-shadow: rgba(24, 24, 27, 0.12);
+}
+
+:root[data-theme="dark"] {
+  --background: #0a0a0a;
+  --foreground: #ededed;
 }
 
 @theme inline {
@@ -13,7 +43,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     --background: #0a0a0a;
     --foreground: #ededed;
   }
@@ -27,6 +57,122 @@ body {
 
 button{
   cursor: pointer;
+}
+
+.theme-toggle {
+  border-color: var(--app-border);
+  background: color-mix(in srgb, var(--app-panel) 82%, transparent);
+  color: var(--app-muted);
+  box-shadow: 0 14px 30px var(--app-shadow);
+  backdrop-filter: blur(12px);
+}
+
+.theme-toggle:hover {
+  background: var(--app-hover);
+  color: var(--app-fg);
+}
+
+.theme-toggle-sun {
+  display: none;
+}
+
+:root[data-theme="light"] .theme-toggle-moon {
+  display: none;
+}
+
+:root[data-theme="light"] .theme-toggle-sun {
+  display: block;
+}
+
+:root[data-theme="light"] .themeable {
+  background-color: var(--app-panel) !important;
+  color: var(--app-fg) !important;
+}
+
+:root[data-theme="light"] .themeable .bg-black,
+:root[data-theme="light"] .themeable [class~="bg-[#050505]"],
+:root[data-theme="light"] .themeable [class~="bg-[#0b0b0b]"],
+:root[data-theme="light"] .themeable [class~="bg-[#111]"],
+:root[data-theme="light"] .themeable [class~="bg-[#151515]"],
+:root[data-theme="light"] .themeable [class~="bg-[#202020]"],
+:root[data-theme="light"] .themeable [class~="bg-[#2a2a2a]"],
+:root[data-theme="light"] .themeable [class~="bg-zinc-950/98"],
+:root[data-theme="light"] .themeable [class~="bg-zinc-900"] {
+  background-color: var(--app-panel) !important;
+}
+
+:root[data-theme="light"] .themeable .from-black {
+  --tw-gradient-from: var(--app-bg) var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgb(247 244 238 / 0) var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-via-stops), var(--tw-gradient-to) !important;
+}
+
+:root[data-theme="light"] .themeable [class~="to-[#050505]"] {
+  --tw-gradient-to: #ebe7df var(--tw-gradient-to-position) !important;
+}
+
+:root[data-theme="light"] .themeable [class~="bg-white/5"],
+:root[data-theme="light"] .themeable [class~="bg-white/10"],
+:root[data-theme="light"] .themeable [class~="bg-white/[0.03]"],
+:root[data-theme="light"] .themeable [class~="bg-white/[0.04]"],
+:root[data-theme="light"] .themeable [class~="bg-black/20"],
+:root[data-theme="light"] .themeable [class~="bg-black/25"],
+:root[data-theme="light"] .themeable [class~="bg-black/35"],
+:root[data-theme="light"] .themeable [class~="bg-black/45"],
+:root[data-theme="light"] .themeable [class~="bg-black/60"],
+:root[data-theme="light"] .themeable [class~="bg-black/75"] {
+  background-color: var(--app-panel-muted) !important;
+}
+
+:root[data-theme="light"] .themeable [class~="hover:bg-white/10"]:hover,
+:root[data-theme="light"] .themeable [class~="hover:bg-white/[0.03]"]:hover,
+:root[data-theme="light"] .themeable [class~="hover:bg-zinc-800"]:hover,
+:root[data-theme="light"] .themeable [class~="hover:bg-[#1a1a1a]"]:hover {
+  background-color: var(--app-hover) !important;
+}
+
+:root[data-theme="light"] .themeable .text-white,
+:root[data-theme="light"] .themeable [class~="text-white/35"],
+:root[data-theme="light"] .themeable [class~="text-white/40"],
+:root[data-theme="light"] .themeable [class~="text-white/45"],
+:root[data-theme="light"] .themeable [class~="text-white/50"],
+:root[data-theme="light"] .themeable [class~="text-white/55"],
+:root[data-theme="light"] .themeable [class~="text-white/60"],
+:root[data-theme="light"] .themeable [class~="text-white/65"],
+:root[data-theme="light"] .themeable [class~="text-white/70"],
+:root[data-theme="light"] .themeable [class~="text-white/75"],
+:root[data-theme="light"] .themeable [class~="text-white/80"],
+:root[data-theme="light"] .themeable [class~="text-white/85"] {
+  color: var(--app-fg) !important;
+}
+
+:root[data-theme="light"] .themeable [class~="text-white/35"],
+:root[data-theme="light"] .themeable [class~="text-white/40"],
+:root[data-theme="light"] .themeable [class~="text-white/45"],
+:root[data-theme="light"] .themeable [class~="text-white/50"],
+:root[data-theme="light"] .themeable [class~="text-white/55"],
+:root[data-theme="light"] .themeable [class~="text-white/60"],
+:root[data-theme="light"] .themeable [class~="text-white/65"],
+:root[data-theme="light"] .themeable [class~="text-white/70"],
+:root[data-theme="light"] .themeable [class~="text-white/75"],
+:root[data-theme="light"] .themeable [class~="text-white/80"],
+:root[data-theme="light"] .themeable [class~="text-white/85"] {
+  color: var(--app-muted) !important;
+}
+
+:root[data-theme="light"] .themeable [class~="border-white/5"],
+:root[data-theme="light"] .themeable [class~="border-white/10"],
+:root[data-theme="light"] .themeable [class~="border-white/15"],
+:root[data-theme="light"] .themeable [class~="border-white/20"] {
+  border-color: var(--app-border) !important;
+}
+
+:root[data-theme="light"] .themeable [class~="shadow-black/20"],
+:root[data-theme="light"] .themeable [class~="shadow-black/30"],
+:root[data-theme="light"] .themeable [class~="shadow-black/40"],
+:root[data-theme="light"] .themeable [class~="shadow-black/50"],
+:root[data-theme="light"] .themeable [class~="shadow-black/60"] {
+  --tw-shadow-color: var(--app-shadow) !important;
 }
 
 .no-scrollbar {

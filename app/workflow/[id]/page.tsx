@@ -43,6 +43,7 @@ import {
   XCircle,
 } from "lucide-react";
 import PulseEdge from "@/app/_components/PulseEdge";
+import ThemeToggle from "@/app/_components/ThemeToggle";
 
 type NodeType = "text" | "image" | "video" | "llm" | "crop" | "frame";
 
@@ -3240,7 +3241,7 @@ export default function WorkflowPage(): JSX.Element {
   }
 
   return (
-    <div className="w-full h-screen overflow-hidden flex bg-black text-white">
+    <div className="themeable w-full h-screen overflow-hidden flex bg-black text-white">
       {!open && !historyOpen && (
         <div className="pointer-events-none fixed inset-x-0 top-3 z-[75] flex items-center justify-between px-3 md:hidden">
           <button
@@ -3476,6 +3477,7 @@ export default function WorkflowPage(): JSX.Element {
           connectionLineType={ConnectionLineType.Bezier}
         >
           <div className="absolute right-3 top-14 z-50 flex md:flex-row flex-col items-end gap-2 md:right-4 md:top-4">
+            <ThemeToggle />
             <button
               onClick={undoGraph}
               aria-label="Undo"

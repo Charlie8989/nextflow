@@ -129,8 +129,12 @@ const getBackendUrl = () => {
   return configured.replace(/\/$/, "");
 };
 
+const DRAFT_WORKFLOW_ID = "new";
+
 const getWorkflowIdFromPath = () =>
-  window.location.pathname.split("/").filter(Boolean).pop() || "";
+  typeof window === "undefined"
+    ? ""
+    : window.location.pathname.split("/").filter(Boolean).pop() || "";
 
 export default function WorkflowPage(): JSX.Element {
   const router = useRouter();
@@ -159,6 +163,8 @@ export default function WorkflowPage(): JSX.Element {
   const viewportRef = useRef(INITIAL_WORKFLOW_VIEWPORT);
   const undoStackRef = useRef<{ nodes: FlowNode[]; edges: Edge[] }[]>([]);
   const redoStackRef = useRef<{ nodes: FlowNode[]; edges: Edge[] }[]>([]);
+  const creatingWorkflowRef = useRef(false);
+  const [workflowId, setWorkflowId] = useState(getWorkflowIdFromPath);
   const [menu, setMenu] = useState<{
     x: number;
     y: number;
@@ -2887,22 +2893,76 @@ export default function WorkflowPage(): JSX.Element {
       )
       .map((edge) => normalizeWorkflowEdge(edge));
 
-  const saveWorkflow = async () => {
-    const workflowId = getWorkflowIdFromPath();
+  const saveWorkflow = useCallback(async () => {
+    const persistableNodes = getPersistableNodes();
+    const persistableEdges = getPersistableEdges();
 
-    await fetch(`${getBackendUrl()}/api/workflow/${workflowId}`, {
+    if (!persistableNodes.length || !user) return;
+
+    let targetWorkflowId = workflowId || getWorkflowIdFromPath();
+
+    if (targetWorkflowId === DRAFT_WORKFLOW_ID) {
+      if (creatingWorkflowRef.current) return;
+
+      creatingWorkflowRef.current = true;
+
+      try {
+        const email = user.primaryEmailAddress?.emailAddress;
+
+        if (email) {
+          await fetch(`${getBackendUrl()}/api/user`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              clerkId: user.id,
+              email,
+              name: user.fullName,
+              imageUrl: user.imageUrl,
+            }),
+          });
+        }
+
+        const createRes = await fetch(`${getBackendUrl()}/api/workflow`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            clerkId: user.id,
+            name,
+            nodes: persistableNodes,
+            edges: persistableEdges,
+          }),
+        });
+
+        if (!createRes.ok) {
+          throw new Error("Could not create workflow.");
+        }
+
+        const created = await createRes.json();
+        targetWorkflowId = created.id;
+        setWorkflowId(created.id);
+        window.history.replaceState(null, "", `/workflow/${created.id}`);
+      } finally {
+        creatingWorkflowRef.current = false;
+      }
+    }
+
+    await fetch(`${getBackendUrl()}/api/workflow/${targetWorkflowId}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         name,
-        nodes: getPersistableNodes(),
-        edges: getPersistableEdges(),
+        nodes: persistableNodes,
+        edges: persistableEdges,
         history,
       }),
     });
-  };
+  }, [edges, history, name, nodes, user, workflowId]);
 
   const exportWorkflowJson = () => {
     const workflowId = getWorkflowIdFromPath();
@@ -2968,10 +3028,18 @@ export default function WorkflowPage(): JSX.Element {
 
   const loadWorkflow = async (clerkId: string) => {
     const workflowId = getWorkflowIdFromPath();
+    setWorkflowId(workflowId);
 
     if (!workflowId) {
       setAccessError("This workflow link is invalid.");
       setHasWorkflowAccess(false);
+      return;
+    }
+
+    if (workflowId === DRAFT_WORKFLOW_ID) {
+      setAccessError("");
+      setHasWorkflowAccess(true);
+      setIsLoaded(true);
       return;
     }
 

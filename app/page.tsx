@@ -462,23 +462,8 @@ function DashboardHome(): JSX.Element {
 
   const [workflows, setWorkflows] = useState<WorkflowSummary[]>([]);
 
-  const createWorkflow = async () => {
-    if (!user) return;
-
-    const data = await fetchApiJson<{ id: string }>("/api/workflow", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        clerkId: user.id,
-        name: "Untitled Workflow",
-        nodes: [],
-        edges: [],
-      }),
-    });
-
-    router.push(`/workflow/${data.id}`);
+  const openDraftWorkflow = () => {
+    router.push("/workflow/new");
   };
 
   const handleStart = async (): Promise<void> => {
@@ -491,7 +476,7 @@ function DashboardHome(): JSX.Element {
 
     try {
       setDashboardError("");
-      await createWorkflow();
+      openDraftWorkflow();
     } catch (error: any) {
       setDashboardError(error?.message || "Could not create workflow.");
     }
@@ -739,7 +724,7 @@ function DashboardHome(): JSX.Element {
             </p>
 
             <button
-              onClick={createWorkflow}
+              onClick={openDraftWorkflow}
               className="rounded-full bg-white px-6 py-2 text-sm font-medium text-black md:px-8 md:py-2"
             >
               New Workflow →

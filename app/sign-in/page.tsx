@@ -1,6 +1,7 @@
 "use client";
 
 import { useClerk, useSignIn } from "@clerk/nextjs";
+import Image from "next/image";
 import { JSX, useState } from "react";
 
 export default function SignInPage(): JSX.Element {
@@ -44,12 +45,12 @@ const handleEmail = async (): Promise<void> => {
                 onClick={handleGoogle}
                 className="bg-white text-black p-3 rounded-lg mb-4 flex items-center justify-center gap-2"
               >
-                <img src="/images/google.svg" className="w-5 h-5" alt="" />
+                <Image src="/images/google.svg" width={20} height={20} className="h-5 w-5" alt="" />
                 Continue with Google
               </button>
 
               <button className="bg-white/90 text-black p-3 rounded-lg mb-4 flex items-center justify-center gap-2">
-                <img src="/images/apple.png" className="w-5 h-5" alt="" />
+                <Image src="/images/apple.png" width={20} height={20} className="h-5 w-5" alt="" />
                 Continue with Apple
               </button>
 
@@ -86,8 +87,11 @@ const handleEmail = async (): Promise<void> => {
         </div>
 
         <div className="hidden md:block w-1/2">
-          <img
+          <Image
             src="/images/auth-right.webp"
+            width={500}
+            height={550}
+            sizes="50vw"
             className="h-full w-full object-cover"
             alt=""
           />

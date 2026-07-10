@@ -1,4 +1,5 @@
 import { Trash2, UploadIcon } from "lucide-react";
+import Image from "next/image";
 import { JSX, useRef } from "react";
 import { Handle, Position } from "reactflow";
 import InlineNodeOutput from "./InlineNodeOutput";
@@ -64,9 +65,15 @@ export default function ImageNode({ data }: Props): JSX.Element {
       >
         {preview ? (
           <>
-            <img
+            <Image
               src={preview}
               alt="preview"
+              width={640}
+              height={420}
+              sizes="320px"
+              unoptimized={
+                preview.startsWith("data:") || preview.startsWith("blob:")
+              }
               className="w-full h-auto max-h-[300px] object-contain"
             />
             <button

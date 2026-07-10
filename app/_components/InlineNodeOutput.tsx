@@ -1,4 +1,5 @@
 import { Download, Maximize2 } from "lucide-react";
+import Image from "next/image";
 import { JSX, WheelEvent } from "react";
 
 type Props = {
@@ -85,9 +86,16 @@ export default function InlineNodeOutput({
       <div className="px-3 pb-3">
         {isImage ? (
           <div className="flex max-h-[280px] items-center justify-center overflow-hidden rounded-md bg-black/35">
-            <img
+            <Image
               src={cleanOutput}
               alt="Node output"
+              width={640}
+              height={360}
+              sizes="300px"
+              unoptimized={
+                cleanOutput.startsWith("data:") ||
+                cleanOutput.startsWith("blob:")
+              }
               className="max-h-[280px] w-full object-contain"
             />
           </div>

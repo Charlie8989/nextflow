@@ -1,4 +1,5 @@
 import { Download, Maximize2, Trash2 } from "lucide-react";
+import Image from "next/image";
 import { JSX } from "react";
 import { Handle, Position } from "reactflow";
 import InlineNodeOutput from "./InlineNodeOutput";
@@ -62,11 +63,16 @@ export default function ExtractFrameNode({ data }: Props): JSX.Element {
       </div>
       {preview && (
         <div className="border-b border-white/10 bg-black/25">
-          <div className="h-56 flex items-center justify-center p-2">
-            <img
+          <div className="relative h-56 p-2">
+            <Image
               src={preview}
               alt="Extracted frame"
-              className="w-full h-full object-contain"
+              fill
+              sizes="300px"
+              unoptimized={
+                preview.startsWith("data:") || preview.startsWith("blob:")
+              }
+              className="p-2 object-contain"
             />
           </div>
           <div className="flex justify-end gap-1 border-t border-white/10 px-2 py-1">

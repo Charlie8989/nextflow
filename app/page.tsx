@@ -2,6 +2,7 @@
 
 import { useUser, useClerk } from "@clerk/nextjs";
 import { LogOut, Trash2 } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useRef, useEffect, JSX } from "react";
 import { exampleWorkflows, ExampleWorkflow } from "@/app/_data/exampleWorkflows";
@@ -66,6 +67,9 @@ const isUsableVideo = (value?: string) =>
       (value.startsWith("data:video/") ||
         /\.(mp4|mov|webm|mpeg|mpg|avi|wmv|3gp)(\?|$)/i.test(value)),
   );
+
+const shouldSkipImageOptimization = (src: string) =>
+  src.startsWith("data:") || src.startsWith("blob:");
 
 const getBackendUrl = () => {
   const configured = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
@@ -157,10 +161,13 @@ function WorkflowCardThumbnail({
 }): JSX.Element {
   if (thumbnail.kind === "image") {
     return (
-      <img
+      <Image
         src={thumbnail.src}
         alt=""
-        className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+        fill
+        sizes="(min-width: 768px) 16vw, 100vw"
+        unoptimized={shouldSkipImageOptimization(thumbnail.src)}
+        className="object-cover transition duration-300 group-hover:scale-105"
       />
     );
   }
@@ -239,13 +246,19 @@ function PreviewNode({ data }: NodeProps<PreviewNodeData>): JSX.Element {
         position={Position.Left}
         className="!h-2 !w-2 !border-0 !bg-white"
       />
-      <img
-        src={data.image}
-        alt={data.label}
-        className={`w-full rounded-[6px] object-cover ${
+      <div
+        className={`relative w-full overflow-hidden rounded-[6px] ${
           data.variant === "output" ? "h-[715px]" : "h-[325px]"
         }`}
-      />
+      >
+        <Image
+          src={data.image || ""}
+          alt={data.label}
+          fill
+          sizes={data.variant === "output" ? "545px" : "260px"}
+          className="object-cover"
+        />
+      </div>
       <Handle
         type="source"
         position={Position.Right}
@@ -587,9 +600,11 @@ function DashboardHome(): JSX.Element {
       <div className="relative hidden h-screen w-[72px] shrink-0 flex-col items-center border-r border-white/10 bg-[#0b0b0b] py-4 md:flex">
         <div className="relative mt-auto" ref={desktopAccountRef}>
           {isLoaded && user ? (
-            <img
+            <Image
               src={user.imageUrl}
               alt="Account"
+              width={40}
+              height={40}
               onClick={() => setOpen((p) => !p)}
               className="h-10 w-10 cursor-pointer rounded-xl object-cover"
             />
@@ -649,10 +664,13 @@ function DashboardHome(): JSX.Element {
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="relative flex h-[280px] shrink-0 items-center md:h-[300px]">
-          <img
+          <Image
             src="/images/hero-image.webp"
             alt=""
-            className="absolute inset-0 h-full w-full object-cover"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover"
           />
 
           <div className="absolute inset-0 bg-black/40" />
@@ -669,9 +687,11 @@ function DashboardHome(): JSX.Element {
                   className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl border border-white/15 bg-black/45 shadow-lg"
                   aria-label="Open account menu"
                 >
-                  <img
+                  <Image
                     src={user.imageUrl}
                     alt="Account"
+                    width={44}
+                    height={44}
                     className="h-full w-full object-cover"
                   />
                 </button>
@@ -703,9 +723,11 @@ function DashboardHome(): JSX.Element {
 
           <div className="relative z-10 mx-8 max-w-2xl px-6 md:mx-12 md:px-12">
             <div className="mb-6 flex items-center gap-3">
-              <img
+              <Image
                 src="/images/nodes.webp"
                 alt=""
+                width={40}
+                height={40}
                 className="h-10 w-10 md:h-10 md:w-10"
               />
               <p className="text-sm font-light md:text-3xl">Node Editor</p>

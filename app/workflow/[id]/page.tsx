@@ -3461,7 +3461,7 @@ export default function WorkflowPage(): JSX.Element {
           fitView
           fitViewOptions={WORKFLOW_FIT_VIEW_OPTIONS}
           minZoom={0.25}
-          maxZoom={1.6}
+          maxZoom={2}
           proOptions={{ hideAttribution: true }}
           defaultEdgeOptions={{
             type: "beizer",
